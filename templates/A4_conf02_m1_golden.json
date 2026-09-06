@@ -1,0 +1,84 @@
+{
+  "schema_version": "0.1",
+  "case_id": "A4_conf02_m1",
+  "candidate": "A4",
+  "conformer": "conf02",
+  "model": 1,
+  "sequence": "SPSNFITMYDW",
+  "receptor_chain": "A",
+  "contact_cutoff_A": 4.0,
+  "expected_state_count": 19,
+  "target_residues": [150, 151, 154, 158, 159, 160, 161, 163, 385],
+  "expected_target_contacts": ["ASN150", "PRO154", "SER159", "GLN160", "LYS161"],
+  "input_files": {
+    "receptor_chain_a": "E:\\research_related\\competition\\GPT_vina_branch_20260906\\receptor_pdb\\h26d3_af3_s2718_m2_TfR1_A.pdb",
+    "receptor_dimer_ab": "E:\\research_related\\competition\\GPT_vina_branch_20260906\\receptor_dimer\\h26d3_af3_s2718_m2_TfR1_AB.pdb",
+    "vina_output": "E:\\research_related\\competition\\docking_test\\vina_pilot_20260906\\outputs\\A4_conf02_out.pdbqt",
+    "pose_metrics": "E:\\research_related\\competition\\docking_test\\vina_pilot_20260906\\analysis\\A4_conf02_pose_metrics.tsv"
+  },
+  "output_directory": "E:\\research_related\\competition\\vina_analysis_automation\\test_output\\A4_conf02_m1_v01",
+  "ligand_atom_ids": {
+    "Asp10_O": 102,
+    "Asp10_H": 103,
+    "Trp11_NE1": 108,
+    "Trp11_H": 114
+  },
+  "expected_metrics": {
+    "score": -6.47,
+    "contact_fraction": 0.7272727272727273,
+    "target_contact_count": 5,
+    "receptor_clash_pairs": 0,
+    "min_receptor_distance": 2.5832438909247433,
+    "chain_b_clash_pairs": 0,
+    "min_chain_b_distance": 20.982187683842692,
+    "basic_geometry_pass": 1
+  },
+  "measurements": [
+    {
+      "interaction": "Trp11-Gln160",
+      "ligand_residue": "TRP11",
+      "ligand_atom": "NE1",
+      "ligand_atom_id": 108,
+      "ligand_angle_atom_id": 114,
+      "receptor_residue": "GLN160",
+      "receptor_resi": 160,
+      "receptor_atom": "OE1",
+      "distance_A": 3.162,
+      "angle_deg": 156.97,
+      "interpretation": "geometrically plausible hydrogen bond"
+    },
+    {
+      "interaction": "Asp10-Asn150",
+      "ligand_residue": "ASP10",
+      "ligand_atom": "O",
+      "ligand_atom_id": 102,
+      "ligand_angle_atom_id": 103,
+      "receptor_residue": "ASN150",
+      "receptor_resi": 150,
+      "receptor_atom": "OD1",
+      "distance_A": 3.32,
+      "angle_deg": 12.87,
+      "interpretation": "close contact; geometry does not support conventional hydrogen bond"
+    },
+    {
+      "interaction": "Asp10-Lys161",
+      "ligand_residue": "ASP10",
+      "ligand_atom": "O",
+      "ligand_atom_id": 102,
+      "ligand_angle_atom_id": null,
+      "receptor_residue": "LYS161",
+      "receptor_resi": 161,
+      "receptor_atom": "NZ",
+      "distance_A": 3.187,
+      "angle_deg": null,
+      "interpretation": "close polar contact; do not call salt bridge because protonation state is not standardized"
+    }
+  ],
+  "tolerances": {
+    "distance_A": 0.02,
+    "angle_deg": 0.2,
+    "score": 0.001,
+    "contact_fraction": 0.0001
+  },
+  "interpretation_source": "manual_golden_reference"
+}
