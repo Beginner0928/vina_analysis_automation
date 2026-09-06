@@ -1,0 +1,36 @@
+# Generated analysis and test artifacts
+test_output/
+
+# Python caches and local tooling
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# PyMOL sessions, rendered images, and run logs
+*.pse
+*.png
+*.log
+
+# External molecular-structure and docking data
+*.pdb
+*.pdbqt
+*.sdf
+docking_test/
+GPT_vina_branch_20260906/
+
+# Editor and operating-system metadata
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+
