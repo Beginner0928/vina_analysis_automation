@@ -1,0 +1,65 @@
+{
+  "schema_version": "0.3",
+  "analysis_id": "A4_ensemble_v03",
+  "candidate": "A4",
+  "sequence": "SPSNFITMYDW",
+  "group": "A",
+  "receptor_monomer_path": "GPT_vina_branch_20260906/receptor_pdb/h26d3_af3_s2718_m2_TfR1_A.pdb",
+  "receptor_dimer_path": "GPT_vina_branch_20260906/receptor_dimer/h26d3_af3_s2718_m2_TfR1_AB.pdb",
+  "receptor_chain": "A",
+  "target_residues": [150, 151, 154, 158, 159, 160, 161, 163, 385],
+  "expected_total_pose_count": 59,
+  "conformers": [
+    {
+      "conformer_name": "conf01",
+      "docking_output_path": "docking_test/vina_pilot_20260906/outputs/A4_conf01_out.pdbqt",
+      "pose_metrics_path": "docking_test/vina_pilot_20260906/analysis/A4_conf01_pose_metrics.tsv",
+      "expected_model_count": 20
+    },
+    {
+      "conformer_name": "conf02",
+      "docking_output_path": "docking_test/vina_pilot_20260906/outputs/A4_conf02_out.pdbqt",
+      "pose_metrics_path": "docking_test/vina_pilot_20260906/analysis/A4_conf02_pose_metrics.tsv",
+      "expected_model_count": 19
+    },
+    {
+      "conformer_name": "conf03",
+      "docking_output_path": "docking_test/vina_pilot_20260906/outputs/A4_conf03_out.pdbqt",
+      "pose_metrics_path": "docking_test/vina_pilot_20260906/analysis/A4_conf03_pose_metrics.tsv",
+      "expected_model_count": 20
+    }
+  ],
+  "contact_cutoffs": {
+    "direct_A": 4.0,
+    "near_A": 5.0
+  },
+  "representative_selection_rules": {
+    "max_receptor_clash_pairs": 0,
+    "max_chain_B_clash_pairs": 0,
+    "min_direct_target_contacts": 2,
+    "required_any_direct_residues": [],
+    "max_per_conformer": 3,
+    "diversity_key": "exact_direct_contact_pattern"
+  },
+  "summary_rules": {
+    "recurrent_contact_frequency_min": 0.25
+  },
+  "input_sha256": {
+    "receptor_monomer_path": "fdc9398d178ebbcd1cd8d33446ca31236e86a7ffa1a413d35281151968ee2bc4",
+    "receptor_dimer_path": "dd7e1b1eaa1be2fa2dca88da8f51edb2915d1a02891cfa4362f72c6d70c7ed27",
+    "conformers": {
+      "conf01": {
+        "docking_output_path": "02765c88bf01b583c554a1b35d7ca5ae1d0f9053bcb0cdb702ffb6e6a690a061",
+        "pose_metrics_path": "f3e74f32fbc2fde267308b117b5b579cae2c9ada0dcdb496fe345aabeb1280cd"
+      },
+      "conf02": {
+        "docking_output_path": "94e0666acd0a46557f3487eca85da03dc8a833298cb9a245a9349c904bb51850",
+        "pose_metrics_path": "50a0622763473ad255ebe9f298e8981fd98d909634b70ba218a2057237e9b836"
+      },
+      "conf03": {
+        "docking_output_path": "6a608e123c40e740928972a45e25b54b9cb42703ced3701bf8bf412614dcfa4f",
+        "pose_metrics_path": "a99995334cc51b275700f49796f7eac454d49b4576dfe8f7e6033956a20aedd3"
+      }
+    }
+  }
+}
