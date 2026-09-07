@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pose_analysis_v02.schema.json",
+  "title": "V0.2 parameterized single-pose analysis spec",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "analysis_id",
+    "candidate",
+    "sequence",
+    "group",
+    "conformer",
+    "model",
+    "docking_output_path",
+    "pose_metrics_path",
+    "receptor_monomer_path",
+    "receptor_dimer_path",
+    "receptor_chain",
+    "target_residues",
+    "direct_contact_cutoff_A",
+    "near_contact_cutoff_A",
+    "manual_interactions"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.2"},
+    "analysis_id": {"type": "string", "minLength": 1},
+    "candidate": {"type": "string", "minLength": 1},
+    "sequence": {"type": "string", "minLength": 1},
+    "group": {"type": "string", "minLength": 1},
+    "conformer": {"type": "string", "minLength": 1},
+    "model": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "The integer label from the Vina PDBQT MODEL N line, not block ordinal."
+    },
+    "docking_output_path": {"$ref": "#/$defs/relativePath"},
+    "pose_metrics_path": {"$ref": "#/$defs/relativePath"},
+    "receptor_monomer_path": {"$ref": "#/$defs/relativePath"},
+    "receptor_dimer_path": {"$ref": "#/$defs/relativePath"},
+    "receptor_chain": {"type": "string", "minLength": 1},
+    "target_residues": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "integer", "minimum": 1}
+    },
+    "direct_contact_cutoff_A": {
+      "const": 4.0,
+      "description": "Formal direct heavy-atom contact cutoff in angstroms."
+    },
+    "near_contact_cutoff_A": {
+      "const": 5.0,
+      "description": "Formal near/second-shell heavy-atom cutoff in angstroms."
+    },
+    "manual_interactions": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/manualInteraction"}
+    },
+    "input_sha256": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "docking_output_path": {"$ref": "#/$defs/sha256"},
+        "pose_metrics_path": {"$ref": "#/$defs/sha256"},
+        "receptor_monomer_path": {"$ref": "#/$defs/sha256"},
+        "receptor_dimer_path": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  },
+  "$defs": {
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Path relative to the --data-root competition directory."
+    },
+    "sha256": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"},
+    "manualInteraction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["interaction_id", "distance"],
+      "properties": {
+        "interaction_id": {"type": "string", "minLength": 1},
+        "labels": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "ligand_residue": {"type": "string"},
+            "ligand_atom": {"type": "string"},
+            "receptor_residue": {"type": "string"}
+          }
+        },
+        "distance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ligand_atom_id", "receptor_residue", "receptor_atom"],
+          "properties": {
+            "ligand_atom_id": {"type": "integer", "minimum": 1},
+            "receptor_residue": {"type": "integer", "minimum": 1},
+            "receptor_atom": {"type": "string", "minLength": 1}
+          }
+        },
+        "angle": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "ligand_donor_atom_id",
+                "ligand_hydrogen_atom_id",
+                "receptor_acceptor"
+              ],
+              "properties": {
+                "ligand_donor_atom_id": {"type": "integer", "minimum": 1},
+                "ligand_hydrogen_atom_id": {"type": "integer", "minimum": 1},
+                "receptor_acceptor": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["residue", "atom"],
+                  "properties": {
+                    "residue": {"type": "integer", "minimum": 1},
+                    "atom": {"type": "string", "minLength": 1}
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "interpretation": {"type": "string"},
+        "interpretation_source": {"type": "string"}
+      }
+    }
+  }
+}
