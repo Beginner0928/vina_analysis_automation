@@ -1,0 +1,24 @@
+{
+  "schema_version": "0.2",
+  "analysis_id": "A4_conf03_m1",
+  "candidate": "A4",
+  "sequence": "SPSNFITMYDW",
+  "group": "A",
+  "conformer": "conf03",
+  "model": 1,
+  "docking_output_path": "docking_test/vina_pilot_20260906/outputs/A4_conf03_out.pdbqt",
+  "pose_metrics_path": "docking_test/vina_pilot_20260906/analysis/A4_conf03_pose_metrics.tsv",
+  "receptor_monomer_path": "GPT_vina_branch_20260906/receptor_pdb/h26d3_af3_s2718_m2_TfR1_A.pdb",
+  "receptor_dimer_path": "GPT_vina_branch_20260906/receptor_dimer/h26d3_af3_s2718_m2_TfR1_AB.pdb",
+  "receptor_chain": "A",
+  "target_residues": [150, 151, 154, 158, 159, 160, 161, 163, 385],
+  "direct_contact_cutoff_A": 4.0,
+  "near_contact_cutoff_A": 5.0,
+  "manual_interactions": [],
+  "input_sha256": {
+    "docking_output_path": "6a608e123c40e740928972a45e25b54b9cb42703ced3701bf8bf412614dcfa4f",
+    "pose_metrics_path": "a99995334cc51b275700f49796f7eac454d49b4576dfe8f7e6033956a20aedd3",
+    "receptor_monomer_path": "fdc9398d178ebbcd1cd8d33446ca31236e86a7ffa1a413d35281151968ee2bc4",
+    "receptor_dimer_path": "dd7e1b1eaa1be2fa2dca88da8f51edb2915d1a02891cfa4362f72c6d70c7ed27"
+  }
+}
