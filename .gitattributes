@@ -1,0 +1,12 @@
+# Keep Git-managed protocol and source text byte-reproducible across platforms.
+.gitattributes text eol=lf
+.gitignore text eol=lf
+*.json text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.tsv text eol=lf
+*.csv text eol=lf
+*.txt text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
