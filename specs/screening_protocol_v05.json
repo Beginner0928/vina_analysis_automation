@@ -1,0 +1,71 @@
+{
+  "schema_version": "0.5",
+  "protocol_id": "tfr1_formal_screening_v05",
+  "screening_protocol_status": "formal_standardized",
+  "scientific_semantics_baseline": {
+    "release_tag": "v0.4",
+    "meaning": "V0.5 orchestrates the frozen V0.4 candidate pipeline without redefining scientific semantics."
+  },
+  "contracts": {
+    "candidate_manifest": {
+      "path": "top40_candidates_v05.json",
+      "path_base": "protocol_directory",
+      "sha256": "297c36027fdab031c70f799ca589635bf10349202df065ec0edfb6ed804a112e"
+    },
+    "ligand_inventory": {
+      "path": "top40_ligand_inventory_v05.json",
+      "path_base": "protocol_directory",
+      "sha256": "84fcfe9198ac4427942780bace7d100e8f5800be9ad0bdbdfede4e78fb6de080"
+    },
+    "receptor_registry": {
+      "path": "vina_analysis_automation/specs/receptor_registry_v04.json",
+      "path_base": "data_root",
+      "sha256": "0e2831ea5a9fa815e709c00737e184fb2227fa9ca0d91f96498dcb6cdb49030a",
+      "registry_id": "tfr1_receptor_registry_v04"
+    },
+    "chemistry_contract": {
+      "path": "docking_test/vina_standardized_v04_20260907/chemistry_contract_v04.json",
+      "path_base": "data_root",
+      "sha256": "dd849afa0baa203fbbd4e2c6104b051edf7489b8da8a08fac9305d5696b04a7b",
+      "contract_id": "v04_formal_standardized_peptide_chemistry"
+    },
+    "analysis_schema": {
+      "path": "specs/peptide_ensemble_v04.schema.json",
+      "path_base": "project_root",
+      "sha256": "25fff11427653fbfcc2e39d38de121a91fd25e4f15d5ecc12aeb378c189663de"
+    },
+    "dependency_lock": {
+      "path": "requirements-v05-lock.txt",
+      "path_base": "project_root",
+      "sha256": "a79c75a06880dcb6b335ebd4f2a8bfea077fec705dd1d3e71bd40d5110544fa7"
+    }
+  },
+  "formal_conformers": {
+    "required_conformer_count": 3,
+    "required_conformer_names": ["conf01", "conf02", "conf03"]
+  },
+  "ligand_preparation": {
+    "protocol_id": "gpt_manual_standardized_ph74_meeko080_backbone_rigid_v1",
+    "source_coordinates": "preselected_standardized_SDF_no_regeneration",
+    "software": "Meeko 0.8.0",
+    "rigidified_bonds": "peptide N-CA and CA-C"
+  },
+  "docking_protocol": {
+    "engine": "AutoDock Vina",
+    "version": "1.2.7",
+    "scoring_function": "vina",
+    "exhaustiveness": 32,
+    "num_modes": 20,
+    "energy_range": 5,
+    "seed": 1701,
+    "cpu": 8
+  },
+  "vina_executable": {
+    "version": "AutoDock Vina v1.2.7",
+    "sha256": "e0c4b2715e0c1a74f6e92d0f3be0328ac97542eafbc111e6b1efad897a73cce5",
+    "version_verification": "locked_executable_sha256"
+  },
+  "batch_execution": {
+    "vina_process_concurrency": 1
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "schema_version": "0.5",
+  "manifest_id": "tfr1_top40_v05",
+  "expected_candidate_count": 40,
+  "expected_candidate_ids": [
+    "A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8", "A9", "A10",
+    "B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9", "B10",
+    "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10",
+    "D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10"
+  ],
+  "expected_group_counts": {"A": 10, "B": 10, "C": 10, "D": 10},
+  "source_provenance": {
+    "audit_status": "MATCH",
+    "sources": {
+      "top40_candidates.tsv": "f9285222e3e2b6d1acabe5c760d69917e8fa71a4916003a658396bb8c6a31f8a",
+      "top40_candidates.csv": "7768007be8f535ae4eba9c3957261bd71b208e079d180892ec97fee7374a7400",
+      "top40_candidates.fasta": "738ff76c39ab96056ce698e9e50a913622ab463f15f7f20d4c52617b674be303",
+      "h26D3_TfR1_AF3_40peptides.xlsx": "6adfe9705a0a74a2cf84ea0a3f9d4b27b59738971629c3fca240247bb9b39557"
+    }
+  },
+  "candidates": [
+    {"candidate_id": "A1", "group": "A", "sequence": "MAADDSDIVRINWNYEI", "peptide_length": 17},
+    {"candidate_id": "A2", "group": "A", "sequence": "RLTLKRLLPGFCHGSISV", "peptide_length": 18},
+    {"candidate_id": "A3", "group": "A", "sequence": "PIPTHSDCPWGIHQ", "peptide_length": 14},
+    {"candidate_id": "A4", "group": "A", "sequence": "SPSNFITMYDW", "peptide_length": 11},
+    {"candidate_id": "A5", "group": "A", "sequence": "HSDTFNKDCRSQSIR", "peptide_length": 15},
+    {"candidate_id": "A6", "group": "A", "sequence": "ISRRVISDGKYSNIF", "peptide_length": 15},
+    {"candidate_id": "A7", "group": "A", "sequence": "GSQCIMVTSSNISNLF", "peptide_length": 16},
+    {"candidate_id": "A8", "group": "A", "sequence": "GRRFNKMSHIKNWFM", "peptide_length": 15},
+    {"candidate_id": "A9", "group": "A", "sequence": "YPHDMIQEFIRP", "peptide_length": 12},
+    {"candidate_id": "A10", "group": "A", "sequence": "NFSPDYIRHPESRWES", "peptide_length": 16},
+    {"candidate_id": "B1", "group": "B", "sequence": "KYIQEPPDPDSYVSIEM", "peptide_length": 17},
+    {"candidate_id": "B2", "group": "B", "sequence": "SMRPVPAMDTAMMGVK", "peptide_length": 16},
+    {"candidate_id": "B3", "group": "B", "sequence": "IPVGNCRYMQ", "peptide_length": 10},
+    {"candidate_id": "B4", "group": "B", "sequence": "IKECPYFSQYGSM", "peptide_length": 13},
+    {"candidate_id": "B5", "group": "B", "sequence": "CRYARTAPSDIQNIINAM", "peptide_length": 18},
+    {"candidate_id": "B6", "group": "B", "sequence": "SPKSRENMSPKP", "peptide_length": 12},
+    {"candidate_id": "B7", "group": "B", "sequence": "KRVDSTDNCDFQM", "peptide_length": 13},
+    {"candidate_id": "B8", "group": "B", "sequence": "PNPTNCTGDFKVVIRFM", "peptide_length": 17},
+    {"candidate_id": "B9", "group": "B", "sequence": "TPNCTPDINPLYRRY", "peptide_length": 15},
+    {"candidate_id": "B10", "group": "B", "sequence": "SKMVFHYYDNRMMS", "peptide_length": 14},
+    {"candidate_id": "C1", "group": "C", "sequence": "IKIKNIRDPNESDC", "peptide_length": 14},
+    {"candidate_id": "C2", "group": "C", "sequence": "RDICQFQFHK", "peptide_length": 10},
+    {"candidate_id": "C3", "group": "C", "sequence": "VKDDMIDSHPIYRMIM", "peptide_length": 16},
+    {"candidate_id": "C4", "group": "C", "sequence": "KSNWYDTIEMRT", "peptide_length": 12},
+    {"candidate_id": "C5", "group": "C", "sequence": "EHKIPTFSRFDIN", "peptide_length": 13},
+    {"candidate_id": "C6", "group": "C", "sequence": "MYITLDTIRELCYDSHT", "peptide_length": 17},
+    {"candidate_id": "C7", "group": "C", "sequence": "KVFVKWPDSRY", "peptide_length": 11},
+    {"candidate_id": "C8", "group": "C", "sequence": "SKFGNPPSWGD", "peptide_length": 11},
+    {"candidate_id": "C9", "group": "C", "sequence": "TSPNRECDDFNFVDT", "peptide_length": 15},
+    {"candidate_id": "C10", "group": "C", "sequence": "VPEDRRIKFPREK", "peptide_length": 13},
+    {"candidate_id": "D1", "group": "D", "sequence": "DWIHKSKQYFI", "peptide_length": 11},
+    {"candidate_id": "D2", "group": "D", "sequence": "MSGPNDKTMMMETISGMG", "peptide_length": 18},
+    {"candidate_id": "D3", "group": "D", "sequence": "EQDTLTMLPEIPQGCFIN", "peptide_length": 18},
+    {"candidate_id": "D4", "group": "D", "sequence": "GSYGYNDSIWCM", "peptide_length": 12},
+    {"candidate_id": "D5", "group": "D", "sequence": "DVREDQSNYSVGPLI", "peptide_length": 15},
+    {"candidate_id": "D6", "group": "D", "sequence": "PSATRDTYYTDTSRY", "peptide_length": 15},
+    {"candidate_id": "D7", "group": "D", "sequence": "PRSTDWPSVDTKYKSLGI", "peptide_length": 18},
+    {"candidate_id": "D8", "group": "D", "sequence": "ITPQVPWIRY", "peptide_length": 10},
+    {"candidate_id": "D9", "group": "D", "sequence": "KEKDFMKYWMSRPW", "peptide_length": 14},
+    {"candidate_id": "D10", "group": "D", "sequence": "PRQSGDWDTNQKDMYR", "peptide_length": 16}
+  ]
+}
