@@ -1,0 +1,108 @@
+{
+  "schema_version": "0.4",
+  "registry_id": "tfr1_receptor_registry_v04",
+  "target_residues": [150, 151, 154, 158, 159, 160, 161, 163, 385],
+  "box_registry_source": {
+    "path": "GPT_vina_branch_20260906/config/vina_boxes.tsv",
+    "sha256": "e9a1b47227a37ec226cb78c2af8f88104a019b9b66ffd1a10d93d7ab8419fe9b"
+  },
+  "groups": {
+    "A": {
+      "template_id": "h26d3_af3_s2718_m2",
+      "coordinate_system_id": "h26d3_af3_s2718_m2",
+      "receptor_monomer_pdb": "GPT_vina_branch_20260906/receptor_pdb/h26d3_af3_s2718_m2_TfR1_A.pdb",
+      "receptor_pdbqt": "GPT_vina_branch_20260906/receptor_pdbqt/h26d3_af3_s2718_m2_TfR1_A.pdbqt",
+      "receptor_dimer_pdb": "GPT_vina_branch_20260906/receptor_dimer/h26d3_af3_s2718_m2_TfR1_AB.pdb",
+      "sha256": {
+        "receptor_monomer_pdb": "fdc9398d178ebbcd1cd8d33446ca31236e86a7ffa1a413d35281151968ee2bc4",
+        "receptor_pdbqt": "f95e4f3eceb2774a711466c3d5690e14e256122f85d42df6dc459ea820f81ca1",
+        "receptor_dimer_pdb": "dd7e1b1eaa1be2fa2dca88da8f51edb2915d1a02891cfa4362f72c6d70c7ed27"
+      },
+      "vina_box": {
+        "center": [-11.144, 23.985, -11.463],
+        "size": [28.44, 36.605, 33.415]
+      },
+      "normalized_receptor_required": false,
+      "production_status": "READY"
+    },
+    "B": {
+      "template_id": "h26d3_boltz_msa_s2718",
+      "coordinate_system_id": "h26d3_boltz_msa_s2718",
+      "receptor_monomer_pdb": "GPT_vina_branch_20260906/receptor_pdb/h26d3_boltz_msa_s2718_TfR1_A.pdb",
+      "receptor_pdbqt": "GPT_vina_branch_20260906/receptor_pdbqt/h26d3_boltz_msa_s2718_TfR1_A.pdbqt",
+      "receptor_dimer_pdb": "GPT_vina_branch_20260906/receptor_dimer/h26d3_boltz_msa_s2718_TfR1_AB.pdb",
+      "sha256": {
+        "receptor_monomer_pdb": "52fd892a2bcd296834e8825a46eff7a250f7887d4453708975c4b698880bf21f",
+        "receptor_pdbqt": "ee9b2d8a33ed0dd24c23df7c8cf751f3b280e513734444b1a25c7bdd4529038f",
+        "receptor_dimer_pdb": "ee96275e47fc64b1fbba460b8f62791908e43c86985c8a88d5042edd2db19551"
+      },
+      "vina_box": {
+        "center": [-15.739, 16.133, 16.584],
+        "size": [38.023, 26.643, 27.375]
+      },
+      "normalized_receptor_required": false,
+      "production_status": "READY"
+    },
+    "C": {
+      "template_id": "h26d3_rank009_rb_s1701_dom",
+      "coordinate_system_id": "h26d3_rank009_rb_s1701_dom",
+      "receptor_monomer_pdb": "GPT_vina_branch_20260906/receptor_pdb_fixed/h26d3_rank009_rb_s1701_dom_TfR1_A_normalized.pdb",
+      "receptor_pdbqt": "GPT_vina_branch_20260906/receptor_pdbqt/h26d3_rank009_rb_s1701_dom_TfR1_A.pdbqt",
+      "receptor_dimer_pdb": "GPT_vina_branch_20260906/receptor_dimer/h26d3_rank009_rb_s1701_dom_TfR1_AB.pdb",
+      "sha256": {
+        "receptor_monomer_pdb": "ff73d6851c20a4d47c70247a100a5c019372b28f4223afbdd4fed6d6604a99b6",
+        "receptor_pdbqt": "efa6f988bbc2384526137b9a963c195b557322529045d84b460dcf11a519af95",
+        "receptor_dimer_pdb": "a51400e0843812a5bfe8fe1fc8cf43079f293e46f697326ec0101a51ba857935"
+      },
+      "vina_box": {
+        "center": [-3.026, 24.096, -5.173],
+        "size": [30.501, 37.743, 27.644]
+      },
+      "normalized_receptor_required": true,
+      "normalization": "SER ATOM record order normalized to N,CA,C,O,CB,OG after element-field repair",
+      "normalization_status": "PASS",
+      "production_status": "approved",
+      "receptor_preparation_blocker": "RESOLVED",
+      "production_provenance_sha256": {
+        "normalized_receptor_monomer_pdb_sha256": "ff73d6851c20a4d47c70247a100a5c019372b28f4223afbdd4fed6d6604a99b6",
+        "docking_receptor_pdbqt_sha256": "efa6f988bbc2384526137b9a963c195b557322529045d84b460dcf11a519af95",
+        "receptor_dimer_pdb_sha256": "a51400e0843812a5bfe8fe1fc8cf43079f293e46f697326ec0101a51ba857935"
+      }
+    },
+    "D": {
+      "template_id": "h26d3_rank016_mdref_s1701_r1",
+      "coordinate_system_id": "h26d3_rank016_mdref_s1701_r1",
+      "receptor_monomer_pdb": "GPT_vina_branch_20260906/receptor_pdb_fixed/h26d3_rank016_mdref_s1701_r1_TfR1_A_normalized.pdb",
+      "receptor_pdbqt": "GPT_vina_branch_20260906/receptor_pdbqt/h26d3_rank016_mdref_s1701_r1_TfR1_A.pdbqt",
+      "receptor_dimer_pdb": "GPT_vina_branch_20260906/receptor_dimer/h26d3_rank016_mdref_s1701_r1_TfR1_AB.pdb",
+      "sha256": {
+        "receptor_monomer_pdb": "329a16214e0c0fafafeadc2e7fd9911ebf681f47d171edc0304c9c8e166ada53",
+        "receptor_pdbqt": "561ef56c9691cd339593b2ffda6439d551e6b245e93a0271470ed940b04f38d2",
+        "receptor_dimer_pdb": "45b6e859bef755ea9c2a7898f19f2ebd8cc939ac4aaa62d9ca7ca5221acc9fec"
+      },
+      "vina_box": {
+        "center": [28.128, 3.3, -9.748],
+        "size": [40.255, 29.623, 30.63]
+      },
+      "normalized_receptor_required": true,
+      "normalization": "SER ATOM record order normalized to N,CA,C,O,CB,OG after element-field repair",
+      "normalization_status": "PASS",
+      "production_status": "approved",
+      "receptor_preparation_blocker": "RESOLVED",
+      "production_provenance_sha256": {
+        "normalized_receptor_monomer_pdb_sha256": "329a16214e0c0fafafeadc2e7fd9911ebf681f47d171edc0304c9c8e166ada53",
+        "docking_receptor_pdbqt_sha256": "561ef56c9691cd339593b2ffda6439d551e6b245e93a0271470ed940b04f38d2",
+        "receptor_dimer_pdb_sha256": "45b6e859bef755ea9c2a7898f19f2ebd8cc939ac4aaa62d9ca7ca5221acc9fec"
+      }
+    }
+  },
+  "production_rules": {
+    "group_is_required": true,
+    "allow_cross_group_coordinate_mixing": false,
+    "allow_delete_bad_res": false,
+    "allow_bad_res": false,
+    "allow_serorder_test_files_as_production": false,
+    "fail_on_missing_registry_file": true,
+    "fail_on_hash_mismatch": true
+  }
+}

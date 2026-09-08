@@ -1,0 +1,54 @@
+{
+  "schema_version": "0.4",
+  "analysis_id": "B3_standardized_docking_v04",
+  "candidate": "B3",
+  "sequence": "IPVGNCRYMQ",
+  "peptide_length": 10,
+  "group": "B",
+  "template_id": "h26d3_boltz_msa_s2718",
+  "receptor_id": "h26d3_boltz_msa_s2718_TfR1_A",
+  "receptor_registry_path": "vina_analysis_automation/specs/receptor_registry_v04.json",
+  "receptor_registry_sha256": "0e2831ea5a9fa815e709c00737e184fb2227fa9ca0d91f96498dcb6cdb49030a",
+  "screening_protocol_status": "formal_standardized",
+  "formal_chemistry": {
+    "formal_charge": 1,
+    "n_terminus": "protonated",
+    "c_terminus": "deprotonated",
+    "arginine": "protonated",
+    "amino_acid_stereochemistry": "standard_L",
+    "artificial_disulfide": false
+  },
+  "ligand_preparation": {
+    "protocol_id": "gpt_manual_standardized_ph74_meeko080_backbone_rigid_v1",
+    "source_coordinates": "preselected_standardized_SDF_no_regeneration",
+    "software": "Meeko 0.8.0",
+    "rigidified_bonds": "peptide N-CA and CA-C"
+  },
+  "docking_protocol": {
+    "engine": "AutoDock Vina",
+    "version": "1.2.7",
+    "scoring_function": "vina",
+    "exhaustiveness": 32,
+    "num_modes": 20,
+    "energy_range": 5,
+    "seed": 1701,
+    "cpu": 8
+  },
+  "conformers": [
+    {
+      "conformer_name": "conf01",
+      "source_sdf_path": "GPT_vina_branch_20260906/peptides/B3/B3_conf01.sdf",
+      "source_sdf_sha256": "88bb9b5304937992d894324e278de13d427567c9beb67ef556da5e7f340ff8db"
+    },
+    {
+      "conformer_name": "conf02",
+      "source_sdf_path": "GPT_vina_branch_20260906/peptides/B3/B3_conf02.sdf",
+      "source_sdf_sha256": "c4c5c500f5fe60d7112037cbbdacd592ca6470f7699c85d44e33810f9414f30f"
+    },
+    {
+      "conformer_name": "conf03",
+      "source_sdf_path": "GPT_vina_branch_20260906/peptides/B3/B3_conf03.sdf",
+      "source_sdf_sha256": "fac404ac8bc4a8fcaff67f30763084a78fe6070685343f57e6dc01a5c877e449"
+    }
+  ]
+}
