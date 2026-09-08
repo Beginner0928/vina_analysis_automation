@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "top40_candidates_v05.schema.json",
+  "title": "TfR1 canonical Top40 candidate identity contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "manifest_id",
+    "expected_candidate_count",
+    "expected_candidate_ids",
+    "expected_group_counts",
+    "source_provenance",
+    "candidates"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.5"},
+    "manifest_id": {"type": "string", "minLength": 1},
+    "expected_candidate_count": {"const": 40},
+    "expected_candidate_ids": {
+      "type": "array",
+      "minItems": 40,
+      "maxItems": 40,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "[ABCD](?:[1-9]|10)"}
+    },
+    "expected_group_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["A", "B", "C", "D"],
+      "properties": {
+        "A": {"const": 10},
+        "B": {"const": 10},
+        "C": {"const": 10},
+        "D": {"const": 10}
+      }
+    },
+    "source_provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["audit_status", "sources"],
+      "properties": {
+        "audit_status": {"const": "MATCH"},
+        "sources": {
+          "type": "object",
+          "additionalProperties": {"type": "string", "pattern": "[0-9a-f]{64}"}
+        }
+      }
+    },
+    "candidates": {
+      "type": "array",
+      "minItems": 40,
+      "maxItems": 40,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["candidate_id", "group", "sequence", "peptide_length"],
+        "properties": {
+          "candidate_id": {"type": "string", "pattern": "[ABCD](?:[1-9]|10)"},
+          "group": {"enum": ["A", "B", "C", "D"]},
+          "sequence": {"type": "string", "pattern": "[ACDEFGHIKLMNPQRSTVWY]+"},
+          "peptide_length": {"type": "integer", "minimum": 1}
+        }
+      }
+    }
+  }
+}

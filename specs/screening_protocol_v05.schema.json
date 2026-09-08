@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "screening_protocol_v05.schema.json",
+  "title": "TfR1 V0.5 formal batch screening protocol",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "protocol_id",
+    "screening_protocol_status",
+    "scientific_semantics_baseline",
+    "contracts",
+    "formal_conformers",
+    "ligand_preparation",
+    "docking_protocol",
+    "vina_executable",
+    "batch_execution"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.5"},
+    "protocol_id": {"type": "string", "minLength": 1},
+    "screening_protocol_status": {"const": "formal_standardized"},
+    "scientific_semantics_baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["release_tag", "meaning"],
+      "properties": {
+        "release_tag": {"const": "v0.4"},
+        "meaning": {"type": "string", "minLength": 1}
+      }
+    },
+    "contracts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidate_manifest", "ligand_inventory", "receptor_registry", "chemistry_contract", "analysis_schema", "dependency_lock"],
+      "properties": {
+        "candidate_manifest": {"type": "object"},
+        "ligand_inventory": {"type": "object"},
+        "receptor_registry": {"type": "object"},
+        "chemistry_contract": {"type": "object"},
+        "analysis_schema": {"type": "object"},
+        "dependency_lock": {"type": "object"}
+      }
+    },
+    "formal_conformers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required_conformer_count", "required_conformer_names"],
+      "properties": {
+        "required_conformer_count": {"type": "integer", "minimum": 1},
+        "required_conformer_names": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "ligand_preparation": {"type": "object"},
+    "docking_protocol": {"type": "object"},
+    "vina_executable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "sha256", "version_verification"],
+      "properties": {
+        "version": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "[0-9a-f]{64}"},
+        "version_verification": {"const": "locked_executable_sha256"}
+      }
+    },
+    "batch_execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["vina_process_concurrency"],
+      "properties": {"vina_process_concurrency": {"const": 1}}
+    }
+  }
+}
