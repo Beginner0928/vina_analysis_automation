@@ -1,4 +1,4 @@
-"""Core utilities for V0.3 peptide-level pose ensemble analysis."""
+"""Core utilities for V0.3/V0.4 peptide-level pose ensemble analysis."""
 
 from __future__ import annotations
 
@@ -44,14 +44,25 @@ REQUIRED_IMPORTED_METRICS = (
 
 
 def validate_ensemble_spec(spec: dict[str, Any]) -> None:
-    if spec.get("schema_version") != "0.3":
-        raise ValueError("schema_version must be '0.3'")
+    schema_version = spec.get("schema_version")
+    if schema_version not in {"0.3", "0.4"}:
+        raise ValueError("schema_version must be '0.3' or '0.4'")
     for field in ("analysis_id", "candidate", "sequence", "group", "receptor_chain"):
         if not isinstance(spec.get(field), str) or not spec[field].strip():
             raise ValueError(f"{field} must be a non-empty string")
     if re.fullmatch(r"[A-Za-z0-9_]+", spec["receptor_chain"]) is None:
         raise ValueError("receptor_chain must be a safe PyMOL token")
-    for field in ENSEMBLE_PATH_FIELDS:
+    path_fields = list(ENSEMBLE_PATH_FIELDS)
+    if schema_version == "0.4":
+        path_fields.extend(
+            (
+                "docking_receptor_pdbqt_path",
+                "receptor_registry_path",
+                "chemistry_contract_path",
+            )
+        )
+        _validate_v04_provenance(spec)
+    for field in path_fields:
         _require_relative_path(spec.get(field), field)
 
     residues = spec.get("target_residues")
@@ -78,7 +89,17 @@ def validate_ensemble_spec(spec: dict[str, Any]) -> None:
         if re.fullmatch(r"[A-Za-z0-9_]+", name) is None:
             raise ValueError(f"{prefix}.conformer_name must be a safe token")
         names.append(name)
-        for field in ("docking_output_path", "pose_metrics_path"):
+        conformer_path_fields = ["docking_output_path", "pose_metrics_path"]
+        if schema_version == "0.4":
+            conformer_path_fields.extend(
+                (
+                    "starting_sdf_path",
+                    "ligand_pdbqt_path",
+                    "vina_config_path",
+                    "vina_log_path",
+                )
+            )
+        for field in conformer_path_fields:
             _require_relative_path(conformer.get(field), f"{prefix}.{field}")
         count = conformer.get("expected_model_count")
         if isinstance(count, bool) or not isinstance(count, int) or count < 1:
@@ -145,12 +166,17 @@ def validate_ensemble_spec(spec: dict[str, Any]) -> None:
     input_hashes = spec.get("input_sha256", {})
     if not isinstance(input_hashes, dict):
         raise ValueError("input_sha256 must be an object when provided")
-    unknown_hash_fields = sorted(
-        set(input_hashes) - {"receptor_monomer_path", "receptor_dimer_path", "conformers"}
-    )
+    allowed_hash_fields = {
+        "receptor_monomer_path",
+        "receptor_dimer_path",
+        "conformers",
+    }
+    if schema_version == "0.4":
+        allowed_hash_fields.add("docking_receptor_pdbqt_path")
+    unknown_hash_fields = sorted(set(input_hashes) - allowed_hash_fields)
     if unknown_hash_fields:
         raise ValueError(f"input_sha256 contains unknown fields: {unknown_hash_fields}")
-    for field in ("receptor_monomer_path", "receptor_dimer_path"):
+    for field in path_fields:
         if field in input_hashes:
             _require_sha256(input_hashes[field], f"input_sha256.{field}")
     conformer_hashes = input_hashes.get("conformers", {})
@@ -164,9 +190,17 @@ def validate_ensemble_spec(spec: dict[str, Any]) -> None:
     for conformer, hashes in conformer_hashes.items():
         if not isinstance(hashes, dict):
             raise ValueError(f"input_sha256.conformers.{conformer} must be an object")
-        unknown_fields = sorted(
-            set(hashes) - {"docking_output_path", "pose_metrics_path"}
-        )
+        allowed_conformer_hashes = {"docking_output_path", "pose_metrics_path"}
+        if schema_version == "0.4":
+            allowed_conformer_hashes.update(
+                {
+                    "starting_sdf_path",
+                    "ligand_pdbqt_path",
+                    "vina_config_path",
+                    "vina_log_path",
+                }
+            )
+        unknown_fields = sorted(set(hashes) - allowed_conformer_hashes)
         if unknown_fields:
             raise ValueError(
                 f"input_sha256.conformers.{conformer} contains unknown fields: "
@@ -176,6 +210,112 @@ def validate_ensemble_spec(spec: dict[str, Any]) -> None:
             _require_sha256(
                 value, f"input_sha256.conformers.{conformer}.{field}"
             )
+
+
+def _validate_v04_provenance(spec: dict[str, Any]) -> None:
+    for field in ("template_id", "receptor_id", "comparison_protocol_id"):
+        if not isinstance(spec.get(field), str) or not spec[field].strip():
+            raise ValueError(f"{field} must be a non-empty string for schema 0.4")
+    _require_sha256(
+        spec.get("receptor_registry_sha256"), "receptor_registry_sha256"
+    )
+    _require_sha256(
+        spec.get("chemistry_contract_sha256"), "chemistry_contract_sha256"
+    )
+    sequence = spec["sequence"]
+    if re.fullmatch(r"[ACDEFGHIKLMNPQRSTVWY]+", sequence) is None:
+        raise ValueError("sequence must contain standard uppercase amino-acid codes")
+    peptide_length = spec.get("peptide_length")
+    if isinstance(peptide_length, bool) or not isinstance(peptide_length, int) or peptide_length < 1:
+        raise ValueError("peptide_length must be a positive integer")
+    if peptide_length != len(sequence):
+        raise ValueError(
+            f"peptide_length {peptide_length} does not equal sequence length {len(sequence)}"
+        )
+    if spec.get("screening_protocol_status") not in {
+        "formal_standardized",
+        "legacy_regression_only",
+    }:
+        raise ValueError(
+            "screening_protocol_status must be formal_standardized or "
+            "legacy_regression_only"
+        )
+    if spec.get("vina_score_primary_source") != "docking_output_pdbqt_remark":
+        raise ValueError(
+            "vina_score_primary_source must be docking_output_pdbqt_remark"
+        )
+    tolerance = spec.get("score_crosscheck_tolerance_kcal_mol")
+    if isinstance(tolerance, bool) or not isinstance(tolerance, (int, float)) or float(tolerance) != 0.001:
+        raise ValueError("score_crosscheck_tolerance_kcal_mol must be 0.001")
+
+    ligand = spec.get("ligand_preparation")
+    if not isinstance(ligand, dict):
+        raise ValueError("ligand_preparation must be an object")
+    if not isinstance(ligand.get("protocol_id"), str) or not ligand["protocol_id"].strip():
+        raise ValueError("ligand_preparation.protocol_id must be a non-empty string")
+    formal_charge = ligand.get("formal_charge")
+    if isinstance(formal_charge, bool) or not isinstance(formal_charge, int):
+        raise ValueError("ligand_preparation.formal_charge must be an integer")
+
+    docking = spec.get("docking_protocol")
+    if not isinstance(docking, dict):
+        raise ValueError("docking_protocol must be an object")
+    required_text = {
+        "protocol_id": None,
+        "engine": "AutoDock Vina",
+        "version": None,
+        "scoring_function": "vina",
+        "score_units": "kcal/mol",
+        "score_direction": "lower_is_better",
+    }
+    for field, expected in required_text.items():
+        value = docking.get(field)
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"docking_protocol.{field} must be a non-empty string")
+        if expected is not None and value != expected:
+            raise ValueError(f"docking_protocol.{field} must be {expected!r}")
+    for field in ("exhaustiveness", "num_modes", "energy_range", "cpu"):
+        value = docking.get(field)
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            raise ValueError(f"docking_protocol.{field} must be a positive integer")
+    seed = docking.get("seed")
+    if isinstance(seed, bool) or not isinstance(seed, int):
+        raise ValueError("docking_protocol.seed must be an integer")
+    for field in ("box_center_A", "box_size_A"):
+        values = docking.get(field)
+        if (
+            not isinstance(values, list)
+            or len(values) != 3
+            or any(isinstance(value, bool) or not isinstance(value, (int, float)) for value in values)
+        ):
+            raise ValueError(f"docking_protocol.{field} must contain three numbers")
+    if any(float(value) <= 0 for value in docking["box_size_A"]):
+        raise ValueError("docking_protocol.box_size_A values must be positive")
+
+
+def validate_legacy_contact_fraction(
+    metrics: dict[str, Any], peptide_length: int, model: int, tolerance: float = 1e-9
+) -> None:
+    """Verify the legacy 5 A fraction against its explicit peptide denominator."""
+    residues = metrics.get("contacted_peptide_residues")
+    fraction = metrics.get("contact_fraction")
+    if not isinstance(residues, list) or not isinstance(fraction, (int, float)):
+        raise ValueError(f"MODEL {model} lacks legacy contact_fraction provenance")
+    if any(
+        isinstance(value, bool) or not isinstance(value, int) or value < 1 or value > peptide_length
+        for value in residues
+    ):
+        raise ValueError(
+            f"MODEL {model} contacted peptide residue is outside 1..{peptide_length}"
+        )
+    if len(residues) != len(set(residues)):
+        raise ValueError(f"MODEL {model} contacted peptide residues contain duplicates")
+    expected = len(residues) / peptide_length
+    if abs(float(fraction) - expected) > tolerance:
+        raise ValueError(
+            f"MODEL {model} legacy contact_fraction {fraction} does not match "
+            f"{len(residues)}/{peptide_length}={expected:.9f}"
+        )
 
 
 def _require_relative_path(value: Any, field: str) -> None:

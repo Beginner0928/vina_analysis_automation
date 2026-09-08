@@ -1,0 +1,116 @@
+{
+  "schema_version": "0.4",
+  "analysis_id": "A4_ensemble_v04",
+  "candidate": "A4",
+  "sequence": "SPSNFITMYDW",
+  "peptide_length": 11,
+  "group": "A",
+  "template_id": "h26d3_af3_s2718_m2",
+  "receptor_id": "h26d3_af3_s2718_m2_TfR1_A",
+  "receptor_registry_path": "vina_analysis_automation/specs/receptor_registry_v04.json",
+  "receptor_registry_sha256": "0e2831ea5a9fa815e709c00737e184fb2227fa9ca0d91f96498dcb6cdb49030a",
+  "chemistry_contract_path": "docking_test/vina_standardized_v04_20260907/chemistry_contract_v04.json",
+  "chemistry_contract_sha256": "dd849afa0baa203fbbd4e2c6104b051edf7489b8da8a08fac9305d5696b04a7b",
+  "receptor_monomer_path": "GPT_vina_branch_20260906/receptor_pdb/h26d3_af3_s2718_m2_TfR1_A.pdb",
+  "receptor_dimer_path": "GPT_vina_branch_20260906/receptor_dimer/h26d3_af3_s2718_m2_TfR1_AB.pdb",
+  "docking_receptor_pdbqt_path": "GPT_vina_branch_20260906/receptor_pdbqt/h26d3_af3_s2718_m2_TfR1_A.pdbqt",
+  "receptor_chain": "A",
+  "target_residues": [150, 151, 154, 158, 159, 160, 161, 163, 385],
+  "screening_protocol_status": "legacy_regression_only",
+  "comparison_protocol_id": "legacy_groupA_af3_m2_neutral_vina127_ex32_nm20_er5_seed1701",
+  "vina_score_primary_source": "docking_output_pdbqt_remark",
+  "score_crosscheck_tolerance_kcal_mol": 0.001,
+  "ligand_preparation": {
+    "protocol_id": "legacy_rdkit_default_neutral_meeko_backbone_rigid_v1",
+    "formal_charge": 0
+  },
+  "docking_protocol": {
+    "protocol_id": "legacy_groupA_af3_m2_vina127_ex32_nm20_er5_seed1701",
+    "engine": "AutoDock Vina",
+    "version": "1.2.7",
+    "scoring_function": "vina",
+    "score_units": "kcal/mol",
+    "score_direction": "lower_is_better",
+    "exhaustiveness": 32,
+    "num_modes": 20,
+    "energy_range": 5,
+    "seed": 1701,
+    "cpu": 8,
+    "box_center_A": [-11.144, 23.985, -11.463],
+    "box_size_A": [28.44, 36.605, 33.415]
+  },
+  "expected_total_pose_count": 59,
+  "conformers": [
+    {
+      "conformer_name": "conf01",
+      "starting_sdf_path": "docking_test/vina_pilot_20260906/ligands/A4/A4_conf01.sdf",
+      "ligand_pdbqt_path": "docking_test/vina_pilot_20260906/ligands/A4/A4_conf01.pdbqt",
+      "vina_config_path": "docking_test/vina_pilot_20260906/configs/A4_conf01.txt",
+      "vina_log_path": "docking_test/vina_pilot_20260906/logs/A4_conf01.log",
+      "docking_output_path": "docking_test/vina_pilot_20260906/outputs/A4_conf01_out.pdbqt",
+      "pose_metrics_path": "docking_test/vina_pilot_20260906/analysis/A4_conf01_pose_metrics.tsv",
+      "expected_model_count": 20
+    },
+    {
+      "conformer_name": "conf02",
+      "starting_sdf_path": "docking_test/vina_pilot_20260906/ligands/A4/A4_conf02.sdf",
+      "ligand_pdbqt_path": "docking_test/vina_pilot_20260906/ligands/A4/A4_conf02.pdbqt",
+      "vina_config_path": "docking_test/vina_pilot_20260906/configs/A4_conf02.txt",
+      "vina_log_path": "docking_test/vina_pilot_20260906/logs/A4_conf02.log",
+      "docking_output_path": "docking_test/vina_pilot_20260906/outputs/A4_conf02_out.pdbqt",
+      "pose_metrics_path": "docking_test/vina_pilot_20260906/analysis/A4_conf02_pose_metrics.tsv",
+      "expected_model_count": 19
+    },
+    {
+      "conformer_name": "conf03",
+      "starting_sdf_path": "docking_test/vina_pilot_20260906/ligands/A4/A4_conf03.sdf",
+      "ligand_pdbqt_path": "docking_test/vina_pilot_20260906/ligands/A4/A4_conf03.pdbqt",
+      "vina_config_path": "docking_test/vina_pilot_20260906/configs/A4_conf03.txt",
+      "vina_log_path": "docking_test/vina_pilot_20260906/logs/A4_conf03.log",
+      "docking_output_path": "docking_test/vina_pilot_20260906/outputs/A4_conf03_out.pdbqt",
+      "pose_metrics_path": "docking_test/vina_pilot_20260906/analysis/A4_conf03_pose_metrics.tsv",
+      "expected_model_count": 20
+    }
+  ],
+  "contact_cutoffs": {"direct_A": 4.0, "near_A": 5.0},
+  "representative_selection_rules": {
+    "max_receptor_clash_pairs": 0,
+    "max_chain_B_clash_pairs": 0,
+    "min_direct_target_contacts": 2,
+    "required_any_direct_residues": [],
+    "max_per_conformer": 3,
+    "diversity_key": "exact_direct_contact_pattern"
+  },
+  "summary_rules": {"recurrent_contact_frequency_min": 0.25},
+  "input_sha256": {
+    "receptor_monomer_path": "fdc9398d178ebbcd1cd8d33446ca31236e86a7ffa1a413d35281151968ee2bc4",
+    "receptor_dimer_path": "dd7e1b1eaa1be2fa2dca88da8f51edb2915d1a02891cfa4362f72c6d70c7ed27",
+    "docking_receptor_pdbqt_path": "f95e4f3eceb2774a711466c3d5690e14e256122f85d42df6dc459ea820f81ca1",
+    "conformers": {
+      "conf01": {
+        "starting_sdf_path": "a7259f37b4ae552071a5d5824139ad5876bd3b53d04d42c57074d71bf1e3390a",
+        "ligand_pdbqt_path": "64d3fcead6fcb922ccb3a5fdef5d30033e8cd808b130f8c9fdc9664e192b9f16",
+        "vina_config_path": "860e76c8dafd4e93d4b69fc1682f1e776854d41298f9ef532283212a046f272d",
+        "vina_log_path": "4c02a1599bfd5278e7420162d1f01cf8754142f31ea79e1544ffdefcff758c8a",
+        "docking_output_path": "02765c88bf01b583c554a1b35d7ca5ae1d0f9053bcb0cdb702ffb6e6a690a061",
+        "pose_metrics_path": "f3e74f32fbc2fde267308b117b5b579cae2c9ada0dcdb496fe345aabeb1280cd"
+      },
+      "conf02": {
+        "starting_sdf_path": "6e49f7ae21912d2fb5c33633cfc75d75022da9e10842025572a840fc9300fab1",
+        "ligand_pdbqt_path": "bd66675ebb51fc2f72e138e2af80ffb4c1ab5aaa0c3a01317344305dda3e21bb",
+        "vina_config_path": "abe43a68a56816398acc2852e86ec401127aef852ccf07a85665b633cf227b83",
+        "vina_log_path": "3f13287e0eb01b39b4bef8c5161fda79c330e214a2613b97eb9ad2fbcbdf7cd3",
+        "docking_output_path": "94e0666acd0a46557f3487eca85da03dc8a833298cb9a245a9349c904bb51850",
+        "pose_metrics_path": "50a0622763473ad255ebe9f298e8981fd98d909634b70ba218a2057237e9b836"
+      },
+      "conf03": {
+        "starting_sdf_path": "778a6d102c346ebf2ec0ae189471b93858b2bd4acceae4c8c64c171f8a0fce04",
+        "ligand_pdbqt_path": "7c4099faaebb4f36ad99dcfb47195ce29eb410d8d3b30c05c85902031a570f60",
+        "vina_config_path": "a104d3cebf84d52269f898f2d60303045eb3d747b18cdcb540797f4afffd90bf",
+        "vina_log_path": "7ab66e7868325bcc6b8b5b21701aef281fd4a5ef6e21b5d674478eb061211f94",
+        "docking_output_path": "6a608e123c40e740928972a45e25b54b9cb42703ced3701bf8bf412614dcfa4f",
+        "pose_metrics_path": "a99995334cc51b275700f49796f7eac454d49b4576dfe8f7e6033956a20aedd3"
+      }
+    }
+  }
+}

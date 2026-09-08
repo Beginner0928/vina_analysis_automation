@@ -1,4 +1,4 @@
-"""CLI for V0.3 peptide-level multi-conformer pose ensemble analysis."""
+"""CLI for V0.3/V0.4 peptide-level multi-conformer pose ensemble analysis."""
 
 from __future__ import annotations
 
@@ -20,8 +20,14 @@ from peptide_ensemble_core import (
     read_pose_metrics_table,
     select_contact_pattern_representatives,
     shared_recurrent_direct_core,
+    validate_legacy_contact_fraction,
     validate_ensemble_spec,
     validate_model_inventory,
+)
+from peptide_score_summary import (
+    build_vina_score_rows,
+    crosscheck_vina_scores,
+    parse_vina_scores,
 )
 from pose_analysis_core import (
     compare_legacy_contacts,
@@ -31,6 +37,7 @@ from pose_analysis_core import (
     parse_vina_model_blocks,
     sha256,
 )
+from receptor_registry import resolve_receptor_bundle, validate_spec_against_bundle
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -38,12 +45,25 @@ TEST_OUTPUT_ROOT = (REPOSITORY_ROOT / "test_output").resolve()
 SCRIPT_PATH = Path(__file__).resolve()
 ENSEMBLE_CORE_PATH = SCRIPT_PATH.with_name("peptide_ensemble_core.py")
 POSE_CORE_PATH = SCRIPT_PATH.with_name("pose_analysis_core.py")
+SCORE_CORE_PATH = SCRIPT_PATH.with_name("peptide_score_summary.py")
 OUTPUT_NAMES = (
     "pose_table.tsv",
     "pose_target_contacts.tsv",
     "target_contact_frequency.tsv",
     "conformer_summary.tsv",
     "representative_poses.tsv",
+    "peptide_summary.md",
+    "peptide_summary.json",
+    "run_manifest.txt",
+)
+V04_OUTPUT_NAMES = (
+    "pose_table.tsv",
+    "pose_target_contacts.tsv",
+    "target_contact_frequency.tsv",
+    "conformer_summary.tsv",
+    "representative_poses.tsv",
+    "vina_score_summary.tsv",
+    "candidate_summary.tsv",
     "peptide_summary.md",
     "peptide_summary.json",
     "run_manifest.txt",
@@ -78,6 +98,12 @@ POSE_COLUMNS = (
     "eligible_pattern_prevalence",
     "selection_status",
     "representative_rank_within_conformer",
+)
+V04_POSE_COLUMNS = POSE_COLUMNS + (
+    "pose_metrics_vina_score",
+    "vina_score_primary_source",
+    "vina_score_crosscheck_status",
+    "vina_score_difference_kcal_mol",
 )
 CONTACT_COLUMNS = (
     "pose_id",
@@ -135,6 +161,65 @@ CONFORMER_COLUMNS = (
     "representative_pose_ids",
     "legacy_warning_mismatch_count",
 )
+SCORE_COLUMNS = (
+    "scope",
+    "conformer",
+    "raw_pose_count",
+    "eligible_pose_count",
+    "eligible_pose_fraction",
+    "best_raw_vina_score",
+    "best_raw_pose_id",
+    "median_raw_vina_score",
+    "best_eligible_vina_score",
+    "best_eligible_pose_id",
+    "median_eligible_vina_score",
+    "mean_eligible_vina_score",
+    "q25_eligible_vina_score",
+    "q75_eligible_vina_score",
+    "mean_conformer_median_eligible_vina_score",
+    "best_eligible_vina_score_range_across_conformers",
+)
+CANDIDATE_COLUMNS = (
+    "summary_schema_version",
+    "analysis_id",
+    "candidate",
+    "group",
+    "sequence",
+    "peptide_length",
+    "template_id",
+    "receptor_id",
+    "screening_protocol_status",
+    "comparison_protocol_id",
+    "vina_score_primary_source",
+    "conformer_count",
+    "total_pose_count",
+    "eligible_pose_count",
+    "eligible_pose_fraction",
+    "best_raw_vina_score",
+    "best_raw_pose_id",
+    "median_raw_vina_score",
+    "best_eligible_vina_score",
+    "best_eligible_pose_id",
+    "median_eligible_vina_score",
+    "mean_eligible_vina_score",
+    "q25_eligible_vina_score",
+    "q75_eligible_vina_score",
+    "mean_conformer_median_eligible_vina_score",
+    "best_eligible_vina_score_range_across_conformers",
+    "shared_recurrent_direct_core",
+    "recurrent_direct_residue_count",
+    "representative_count",
+    "representative_pose_ids",
+    "warning_count",
+    "analysis_status",
+    "error_count",
+    "source_spec_sha256",
+    "receptor_registry_sha256",
+    "receptor_monomer_sha256",
+    "docking_receptor_pdbqt_sha256",
+    "receptor_dimer_sha256",
+    "chemistry_contract_sha256",
+)
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -189,8 +274,44 @@ def analyze_peptide_ensemble(
     resolved_spec = spec_path.resolve()
     spec = load_json(resolved_spec)
     validate_ensemble_spec(spec)
+    is_v04 = spec["schema_version"] == "0.4"
     safe_output = require_safe_output_directory(output_dir)
     expected_hashes = spec.get("input_sha256", {})
+
+    registry_bundle: dict[str, Any] | None = None
+    registry_summary: dict[str, Any] | None = None
+    chemistry_contract_detail: dict[str, Any] | None = None
+    if is_v04:
+        registry_path, registry_detail = resolve_input(
+            data_root,
+            spec["receptor_registry_path"],
+            "receptor_registry_path",
+            spec["receptor_registry_sha256"],
+        )
+        registry_bundle = resolve_receptor_bundle(
+            registry_path, data_root, spec["group"]
+        )
+        registry_identity = validate_spec_against_bundle(spec, registry_bundle)
+        registry_summary = {
+            **registry_identity,
+            "spec_path": registry_detail["spec_path"],
+            "resolved_path": registry_detail["resolved_path"],
+            "sha256": registry_detail["sha256"],
+            "hash_verification": registry_detail["hash_verification"],
+            "bundle_sha256": registry_bundle["sha256"],
+            "vina_box": registry_bundle["vina_box"],
+            "target_residues": registry_bundle["target_residues"],
+            "normalized_receptor_required": registry_bundle[
+                "normalized_receptor_required"
+            ],
+            "coordinate_audit": registry_bundle["coordinate_audit"],
+        }
+        _, chemistry_contract_detail = resolve_input(
+            data_root,
+            spec["chemistry_contract_path"],
+            "chemistry_contract_path",
+            spec["chemistry_contract_sha256"],
+        )
 
     receptor_path, receptor_detail = resolve_input(
         data_root,
@@ -214,6 +335,40 @@ def analyze_peptide_ensemble(
         },
         "conformers": {},
     }
+    if is_v04:
+        input_details["source_spec_path"] = {
+            "spec_path": str(spec_path),
+            "resolved_path": str(resolved_spec),
+            "sha256": sha256(resolved_spec),
+            "expected_sha256": None,
+            "hash_verification": "ACTUAL",
+        }
+        assert chemistry_contract_detail is not None
+        input_details["chemistry_contract_path"] = chemistry_contract_detail
+        docking_receptor_path, docking_receptor_detail = resolve_input(
+            data_root,
+            spec["docking_receptor_pdbqt_path"],
+            "docking_receptor_pdbqt_path",
+            expected_hashes.get("docking_receptor_pdbqt_path"),
+        )
+        input_details["docking_receptor_pdbqt_path"] = {
+            **docking_receptor_detail,
+            "role": "Vina docking receptor provenance",
+        }
+        assert registry_bundle is not None
+        actual_receptor_hashes = {
+            "receptor_monomer_pdb": receptor_detail["sha256"],
+            "receptor_dimer_pdb": dimer_detail["sha256"],
+            "receptor_pdbqt": docking_receptor_detail["sha256"],
+        }
+        for field, actual in actual_receptor_hashes.items():
+            expected = registry_bundle["sha256"][field]
+            if actual.lower() != expected.lower():
+                raise ValueError(
+                    f"Resolved {field} hash differs from receptor registry: "
+                    f"expected {expected}, actual {actual}"
+                )
+        input_details["receptor_registry_path"] = registry_summary
     records: list[dict[str, Any]] = []
     contact_rows: list[dict[str, Any]] = []
     conformer_names = [item["conformer_name"] for item in spec["conformers"]]
@@ -242,12 +397,39 @@ def analyze_peptide_ensemble(
             set(metrics_by_model),
             int(conformer_spec["expected_model_count"]),
         )
+        score_checks: dict[int, dict[str, Any]] = {}
+        if is_v04:
+            primary_scores = parse_vina_scores(blocks)
+            score_checks = crosscheck_vina_scores(
+                primary_scores,
+                metrics_by_model,
+                float(spec["score_crosscheck_tolerance_kcal_mol"]),
+            )
+        else:
+            primary_scores = {
+                model: float(metrics["score"])
+                for model, metrics in metrics_by_model.items()
+            }
         input_details["conformers"][conformer] = {
             "docking_output_path": docking_detail,
             "pose_metrics_path": metrics_detail,
             "metrics_header": metrics_header,
             "model_labels": list(blocks),
         }
+        if is_v04:
+            for field in (
+                "starting_sdf_path",
+                "ligand_pdbqt_path",
+                "vina_config_path",
+                "vina_log_path",
+            ):
+                _, detail = resolve_input(
+                    data_root,
+                    conformer_spec[field],
+                    f"{conformer}.{field}",
+                    conformer_hashes.get(field),
+                )
+                input_details["conformers"][conformer][field] = detail
 
         for model, block in blocks.items():
             pose_id = f"{spec['candidate']}_{conformer}_m{model}"
@@ -270,14 +452,32 @@ def analyze_peptide_ensemble(
                 if row["classification"] == "near"
             ]
             metrics = metrics_by_model[model]
+            if is_v04:
+                validate_legacy_contact_fraction(
+                    metrics, int(spec["peptide_length"]), model
+                )
             legacy_consistency = compare_legacy_contacts(
                 direct_contacts, near_contacts, metrics["target_contacts"]
+            )
+            metrics_provenance = metrics["raw_model_row"]
+            legacy_metric_origin = (
+                "v04_recalculated_legacy_definitions"
+                if any(
+                    str(metrics_provenance.get(field, "")).startswith("V0.4 ")
+                    for field in (
+                        "contact_fraction_provenance",
+                        "basic_geometry_pass_provenance",
+                        "receptor_clash_provenance",
+                        "chain_b_clash_provenance",
+                    )
+                )
+                else "legacy_pose_metrics"
             )
             record = {
                 "pose_id": pose_id,
                 "conformer": conformer,
                 "model": model,
-                "vina_score": metrics["score"],
+                "vina_score": primary_scores[model],
                 "legacy_5A_receptor_contact_fraction": metrics["contact_fraction"],
                 "direct_target_contacts": direct_contacts,
                 "direct_target_contact_count": len(direct_contacts),
@@ -291,16 +491,43 @@ def analyze_peptide_ensemble(
                 "chain_B_clash_pairs": metrics["chain_b_clash_pairs"],
                 "minimum_chain_B_distance_A": metrics["min_chain_b_distance"],
                 "legacy_basic_geometry_pass": metrics["basic_geometry_pass"],
-                "legacy_basic_geometry_pass_source": "legacy_pose_metrics",
+                "legacy_basic_geometry_pass_source": legacy_metric_origin,
+                "legacy_metric_origin": legacy_metric_origin,
                 "target_contact_details": details,
                 "provenance": {
                     "direct_near_contacts": "V0.2 heavy-atom coordinate primitive",
-                    "score_legacy_5A_receptor_contact_fraction_clashes_legacy_basic": (
-                        "legacy_pose_metrics"
-                    ),
+                    "score_legacy_5A_receptor_contact_fraction_clashes_legacy_basic": legacy_metric_origin,
                     "chain_B_metrics": "existing pose_metrics.tsv; dimer not recalculated",
+                    "pose_metrics_fields": {
+                        field: metrics_provenance.get(field)
+                        for field in (
+                            "contact_fraction_provenance",
+                            "basic_geometry_pass_provenance",
+                            "receptor_clash_provenance",
+                            "chain_b_clash_provenance",
+                            "vina_score_provenance",
+                        )
+                        if metrics_provenance.get(field)
+                    },
                 },
             }
+            if is_v04:
+                score_check = score_checks[model]
+                record.update(
+                    {
+                        "pose_metrics_vina_score": score_check["pose_metrics_score"],
+                        "vina_score_primary_source": spec[
+                            "vina_score_primary_source"
+                        ],
+                        "vina_score_crosscheck_status": score_check["status"],
+                        "vina_score_difference_kcal_mol": score_check[
+                            "difference_kcal_mol"
+                        ],
+                    }
+                )
+                record["provenance"]["vina_score"] = (
+                    "docking_output_pdbqt_remark primary; pose_metrics.tsv cross-check"
+                )
             records.append(
                 annotate_filter_provenance(
                     record, spec["representative_selection_rules"]
@@ -341,6 +568,9 @@ def analyze_peptide_ensemble(
         ),
     )
     warnings = build_warnings(records, conformer_names, representatives)
+    score_rows = build_vina_score_rows(records, conformer_names) if is_v04 else []
+    if is_v04 and not any(record["representative_eligible"] for record in records):
+        warnings.append("NO_ELIGIBLE_POSES")
     peptide_frequency_rows = [row for row in frequency_rows if row["scope"] == "peptide"]
     summary = build_summary_json(
         spec,
@@ -350,7 +580,9 @@ def analyze_peptide_ensemble(
         representatives,
         input_details,
         warnings,
+        score_rows,
     )
+    candidate_rows = [build_candidate_summary_row(spec, summary, score_rows)] if is_v04 else []
 
     staging = safe_output.with_name(
         f".{safe_output.name}.incomplete_"
@@ -360,13 +592,17 @@ def analyze_peptide_ensemble(
         raise FileExistsError(f"Staging directory already exists: {staging}")
     staging.parent.mkdir(parents=True, exist_ok=True)
     staging.mkdir(exist_ok=False)
-    write_tsv(staging / "pose_table.tsv", POSE_COLUMNS, records)
+    pose_columns = V04_POSE_COLUMNS if is_v04 else POSE_COLUMNS
+    write_tsv(staging / "pose_table.tsv", pose_columns, records)
     write_tsv(staging / "pose_target_contacts.tsv", CONTACT_COLUMNS, contact_rows)
     write_tsv(
         staging / "target_contact_frequency.tsv", FREQUENCY_COLUMNS, frequency_rows
     )
     write_tsv(staging / "conformer_summary.tsv", CONFORMER_COLUMNS, conformer_rows)
-    write_tsv(staging / "representative_poses.tsv", POSE_COLUMNS, representatives)
+    write_tsv(staging / "representative_poses.tsv", pose_columns, representatives)
+    if is_v04:
+        write_tsv(staging / "vina_score_summary.tsv", SCORE_COLUMNS, score_rows)
+        write_tsv(staging / "candidate_summary.tsv", CANDIDATE_COLUMNS, candidate_rows)
     (staging / "peptide_summary.json").write_text(
         json.dumps(summary, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
@@ -374,7 +610,15 @@ def analyze_peptide_ensemble(
         build_summary_markdown(summary), encoding="utf-8"
     )
     (staging / "run_manifest.txt").write_text(
-        build_manifest(resolved_spec, spec, data_root, safe_output, input_details, summary),
+        build_manifest(
+            resolved_spec,
+            spec,
+            data_root,
+            safe_output,
+            input_details,
+            summary,
+            V04_OUTPUT_NAMES if is_v04 else OUTPUT_NAMES,
+        ),
         encoding="utf-8",
     )
     staging.replace(safe_output)
@@ -476,6 +720,7 @@ def build_summary_json(
     representatives: list[dict[str, Any]],
     input_details: dict[str, Any],
     warnings: list[str],
+    score_rows: list[dict[str, Any]],
 ) -> dict[str, Any]:
     threshold = float(spec["summary_rules"]["recurrent_contact_frequency_min"])
     recurrent_direct = [
@@ -506,8 +751,14 @@ def build_summary_json(
                 if union
                 else 1.0
             )
-    return {
-        "schema_version": "0.3",
+    metric_origins = sorted(
+        set(record["legacy_metric_origin"] for record in records)
+    )
+    metric_origin: str | list[str] = (
+        metric_origins[0] if len(metric_origins) == 1 else metric_origins
+    )
+    summary = {
+        "schema_version": spec["schema_version"],
         "analysis_id": spec["analysis_id"],
         "identity": {field: spec[field] for field in ("candidate", "sequence", "group")},
         "pose_counts": {
@@ -528,16 +779,18 @@ def build_summary_json(
             "definition": "fraction of peptide residues with any heavy atom <= 5.0 A from any chain-A receptor heavy atom",
             "comparison": "distance <= 5.0 A using unrounded coordinates",
             "scope": "whole receptor interface, not target residues",
-            "source": "legacy_pose_metrics",
-            "generating_logic": "existing pilot analyze_results.py",
+            "source": metric_origin,
+            "generating_logic": "pose_metrics.tsv source-specific implementation",
             "relationship_to_legacy_contacts": "same heavy-atom <=5.0 A receptor loop as legacy target contacts",
             "v03_role": "secondary_ranking_only",
             "v03_direct_hard_filter": False,
+            "ensemble_role": "secondary_ranking_only",
+            "eligibility_hard_filter": False,
             "legacy_basic_geometry_pass_contact_fraction_threshold": 0.5,
         },
         "legacy_basic_geometry_pass": {
-            "source": "legacy_pose_metrics",
-            "role": "provenance_only_not_v03_eligibility",
+            "source": metric_origin,
+            "role": "provenance_only_not_ensemble_eligibility",
             "definition": (
                 "legacy_5A_receptor_contact_fraction >= 0.5 AND "
                 "legacy_5A_target_contact_count >= 2 AND receptor_clash_pairs == 0 "
@@ -569,9 +822,98 @@ def build_summary_json(
         "warnings": warnings,
         "provenance": {
             "contacts": "V0.2 heavy-atom contact primitive",
-            "imported_metrics": "existing pose_metrics.tsv",
+            "imported_metrics": metric_origin,
             "receptor_dimer": "validated and hashed only; chain-B metrics not recalculated",
         },
+    }
+    if spec["schema_version"] == "0.4":
+        registry_summary = input_details.get("receptor_registry_path")
+        if not isinstance(registry_summary, dict):
+            raise ValueError("V0.4 receptor registry provenance is missing")
+        summary["identity"].update(
+            {
+                "peptide_length": spec["peptide_length"],
+                "template_id": spec["template_id"],
+                "receptor_id": spec["receptor_id"],
+            }
+        )
+        summary.update(
+            {
+                "screening_protocol_status": spec["screening_protocol_status"],
+                "comparison_protocol_id": spec["comparison_protocol_id"],
+                "ligand_preparation": spec["ligand_preparation"],
+                "docking_protocol": spec["docking_protocol"],
+                "vina_score_provenance": {
+                    "primary_source": spec["vina_score_primary_source"],
+                    "crosscheck_source": "pose_metrics.tsv",
+                    "crosscheck_tolerance_kcal_mol": spec[
+                        "score_crosscheck_tolerance_kcal_mol"
+                    ],
+                    "crosscheck_status_counts": dict(
+                        Counter(
+                            record["vina_score_crosscheck_status"]
+                            for record in records
+                        )
+                    ),
+                },
+                "vina_score_summary": score_rows,
+                "receptor_registry": registry_summary,
+            }
+        )
+    return summary
+
+
+def build_candidate_summary_row(
+    spec: dict[str, Any],
+    summary: dict[str, Any],
+    score_rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    overall = next(row for row in score_rows if row["scope"] == "peptide")
+    shared_core = sorted(
+        set(summary["conformer_consistency"]["recurrent_direct_shared_core"])
+    )
+    representatives = summary["representative_poses"]
+    inputs = summary["input_files"]
+    return {
+        "summary_schema_version": summary["schema_version"],
+        "analysis_id": spec["analysis_id"],
+        "candidate": spec["candidate"],
+        "sequence": spec["sequence"],
+        "peptide_length": spec["peptide_length"],
+        "group": spec["group"],
+        "template_id": spec["template_id"],
+        "receptor_id": spec["receptor_id"],
+        "screening_protocol_status": spec["screening_protocol_status"],
+        "comparison_protocol_id": spec["comparison_protocol_id"],
+        "vina_score_primary_source": spec["vina_score_primary_source"],
+        "conformer_count": len(summary["pose_counts"]["by_conformer"]),
+        "total_pose_count": summary["pose_counts"]["total"],
+        "eligible_pose_count": overall["eligible_pose_count"],
+        "eligible_pose_fraction": overall["eligible_pose_fraction"],
+        **{
+            field: overall[field]
+            for field in SCORE_COLUMNS
+            if field.startswith(("best_", "median_", "mean_", "q25_", "q75_"))
+        },
+        "shared_recurrent_direct_core": shared_core,
+        "recurrent_direct_residue_count": len(shared_core),
+        "representative_count": len(representatives),
+        "representative_pose_ids": [
+            row["pose_id"] for row in representatives
+        ],
+        "warning_count": len(summary["warnings"]),
+        "analysis_status": (
+            "PASS_WITH_WARNINGS" if summary["warnings"] else "PASS"
+        ),
+        "error_count": 0,
+        "source_spec_sha256": inputs["source_spec_path"]["sha256"],
+        "receptor_registry_sha256": inputs["receptor_registry_path"]["sha256"],
+        "receptor_monomer_sha256": inputs["receptor_monomer_path"]["sha256"],
+        "docking_receptor_pdbqt_sha256": inputs[
+            "docking_receptor_pdbqt_path"
+        ]["sha256"],
+        "receptor_dimer_sha256": inputs["receptor_dimer_path"]["sha256"],
+        "chemistry_contract_sha256": inputs["chemistry_contract_path"]["sha256"],
     }
 
 
@@ -592,20 +934,41 @@ def build_summary_markdown(summary: dict[str, Any]) -> str:
         + ";".join(map(str, recurrent["near_by_conformer_balanced_frequency"]))
         + "`",
         "",
-        "## Legacy 5 A receptor contact-fraction provenance",
-        "",
-        summary["contact_fraction_audit"]["definition"] + ".",
-        "`legacy_5A_receptor_contact_fraction` is retained as a secondary ranking "
-        "value and is not a V0.3 hard filter.",
-        "`legacy_basic_geometry_pass` is retained for provenance only and does not "
-        "control V0.3 eligibility.",
-        "",
-        "## Contact-pattern representatives",
-        "",
-        "V0.3 selects representatives by eligible-pose contact-pattern prevalence; "
-        "it does not perform RMSD clustering or claim structural diversity.",
-        "",
     ]
+    if summary["schema_version"] == "0.4":
+        overall = next(
+            row
+            for row in summary["vina_score_summary"]
+            if row["scope"] == "peptide"
+        )
+        lines.extend(
+            [
+            "## Vina score provenance",
+            "",
+            f"- Primary source: `{summary['vina_score_provenance']['primary_source']}`",
+            "- Cross-check source: `pose_metrics.tsv`",
+            f"- Best raw score: `{overall['best_raw_vina_score']}` (`{overall['best_raw_pose_id']}`)",
+            f"- Best eligible score: `{overall['best_eligible_vina_score']}` (`{overall['best_eligible_pose_id']}`)",
+            "",
+            ]
+        )
+    lines.extend(
+        [
+            "## Legacy 5 A receptor contact-fraction provenance",
+            "",
+            summary["contact_fraction_audit"]["definition"] + ".",
+            "`legacy_5A_receptor_contact_fraction` is retained as a secondary ranking "
+            "value and is not an eligibility hard filter.",
+            "`legacy_basic_geometry_pass` is retained for provenance only and does not "
+            "control ensemble eligibility.",
+            "",
+            "## Contact-pattern representatives",
+            "",
+            "Representatives are selected by eligible-pose contact-pattern prevalence; "
+            "it does not perform RMSD clustering or claim structural diversity.",
+            "",
+        ]
+    )
     for representative in summary["representative_poses"]:
         lines.append(
             f"- `{representative['pose_id']}`: direct `"
@@ -645,6 +1008,7 @@ def build_manifest(
     output_dir: Path,
     input_details: dict[str, Any],
     summary: dict[str, Any],
+    output_names: tuple[str, ...],
 ) -> str:
     lines = [
         f"run_datetime={datetime.now().astimezone().isoformat(timespec='seconds')}",
@@ -659,20 +1023,59 @@ def build_manifest(
         f"python_executable={Path(sys.executable).resolve()}",
         f"pose_count.total={summary['pose_counts']['total']}",
         "contact_definition=heavy atoms; direct d<=4.0 A; near 4.0<d<=5.0 A; no pre-classification rounding",
-        "legacy_5A_receptor_contact_fraction.source=legacy_pose_metrics",
+        "legacy_5A_receptor_contact_fraction.source="
+        + str(summary["contact_fraction_audit"]["source"]),
         "legacy_5A_receptor_contact_fraction.role=secondary_ranking_only_not_hard_filter",
-        "legacy_basic_geometry_pass.source=legacy_pose_metrics",
-        "legacy_basic_geometry_pass.role=provenance_only_not_v03_eligibility",
+        "legacy_basic_geometry_pass.source="
+        + str(summary["legacy_basic_geometry_pass"]["source"]),
+        "legacy_basic_geometry_pass.role=provenance_only_not_ensemble_eligibility",
         "pattern_prevalence.denominator=representative-eligible poses within each conformer",
         "representative_diversity=contact-pattern diversity only; no RMSD clustering",
         "chain_B_metrics=imported from pose_metrics.tsv; receptor dimer not recalculated",
     ]
-    for field in ("receptor_monomer_path", "receptor_dimer_path"):
+    if spec["schema_version"] == "0.4":
+        lines.extend(
+            [
+                f"score_core_sha256={sha256(SCORE_CORE_PATH)}",
+                f"screening_protocol_status={spec['screening_protocol_status']}",
+                f"comparison_protocol_id={spec['comparison_protocol_id']}",
+                f"vina_score_primary_source={spec['vina_score_primary_source']}",
+                "vina_score_crosscheck_source=pose_metrics.tsv",
+                f"vina_score_crosscheck_tolerance_kcal_mol={spec['score_crosscheck_tolerance_kcal_mol']}",
+                "score_crosscheck.MATCH="
+                + str(
+                    summary["vina_score_provenance"]["crosscheck_status_counts"].get(
+                        "MATCH", 0
+                    )
+                ),
+                f"receptor_registry.id={summary['receptor_registry']['registry_id']}",
+                f"receptor_registry.sha256={summary['receptor_registry']['sha256']}",
+                f"receptor_registry.group={summary['receptor_registry']['group']}",
+                f"receptor_registry.template_id={summary['receptor_registry']['template_id']}",
+                f"receptor_registry.preflight_status={summary['receptor_registry']['preflight_status']}",
+            ]
+        )
+    receptor_fields = ["receptor_monomer_path", "receptor_dimer_path"]
+    if spec["schema_version"] == "0.4":
+        receptor_fields.extend(
+            ("docking_receptor_pdbqt_path", "chemistry_contract_path")
+        )
+    for field in receptor_fields:
         detail = input_details[field]
         for key in ("spec_path", "resolved_path", "sha256", "expected_sha256", "hash_verification"):
             lines.append(f"input.{field}.{key}={detail.get(key) or 'NOT_PROVIDED'}")
     for conformer, conformer_details in input_details["conformers"].items():
-        for field in ("docking_output_path", "pose_metrics_path"):
+        conformer_fields = ["docking_output_path", "pose_metrics_path"]
+        if spec["schema_version"] == "0.4":
+            conformer_fields.extend(
+                (
+                    "starting_sdf_path",
+                    "ligand_pdbqt_path",
+                    "vina_config_path",
+                    "vina_log_path",
+                )
+            )
+        for field in conformer_fields:
             detail = conformer_details[field]
             for key in ("spec_path", "resolved_path", "sha256", "expected_sha256", "hash_verification"):
                 lines.append(
@@ -685,7 +1088,7 @@ def build_manifest(
         )
     for warning in summary["warnings"]:
         lines.append(f"warning={warning}")
-    for name in OUTPUT_NAMES:
+    for name in output_names:
         lines.append(f"output={output_dir / name}")
     return "\n".join(lines) + "\n"
 

@@ -48,6 +48,60 @@ def base_spec() -> dict[str, object]:
     }
 
 
+def v04_spec() -> dict[str, object]:
+    spec = base_spec()
+    spec.update(
+        {
+            "schema_version": "0.4",
+            "peptide_length": 4,
+            "template_id": "template_x",
+            "receptor_id": "template_x_TfR1_A",
+            "receptor_registry_path": "specs/receptor_registry_v04.json",
+            "receptor_registry_sha256": "a" * 64,
+            "chemistry_contract_path": "chemistry/contract.json",
+            "chemistry_contract_sha256": "b" * 64,
+            "docking_receptor_pdbqt_path": "receptors/A.pdbqt",
+            "screening_protocol_status": "formal_standardized",
+            "comparison_protocol_id": "v04_protocol_x",
+            "vina_score_primary_source": "docking_output_pdbqt_remark",
+            "score_crosscheck_tolerance_kcal_mol": 0.001,
+            "ligand_preparation": {
+                "protocol_id": "explicit_ph74_v1",
+                "formal_charge": 0,
+            },
+            "docking_protocol": {
+                "protocol_id": "vina_1_2_7_ex32_v1",
+                "engine": "AutoDock Vina",
+                "version": "1.2.7",
+                "scoring_function": "vina",
+                "score_units": "kcal/mol",
+                "score_direction": "lower_is_better",
+                "exhaustiveness": 32,
+                "num_modes": 20,
+                "energy_range": 5,
+                "seed": 1701,
+                "cpu": 8,
+                "box_center_A": [-1.0, 2.0, 3.0],
+                "box_size_A": [20.0, 21.0, 22.0],
+            },
+        }
+    )
+    conformers = spec["conformers"]
+    assert isinstance(conformers, list)
+    for conformer in conformers:
+        assert isinstance(conformer, dict)
+        name = conformer["conformer_name"]
+        conformer.update(
+            {
+                "starting_sdf_path": f"ligands/{name}.sdf",
+                "ligand_pdbqt_path": f"ligands/{name}.pdbqt",
+                "vina_config_path": f"configs/{name}.txt",
+                "vina_log_path": f"logs/{name}.log",
+            }
+        )
+    return spec
+
+
 class EnsembleSpecTests(unittest.TestCase):
     def test_generic_spec_accepts_non_59_total_equal_to_conformer_sum(self) -> None:
         from peptide_ensemble_core import validate_ensemble_spec
@@ -106,6 +160,75 @@ class EnsembleSpecTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, r"unsupported.*min_contact_fraction"):
             validate_ensemble_spec(spec)
+
+    def test_v04_spec_accepts_protocol_provenance(self) -> None:
+        from peptide_ensemble_core import validate_ensemble_spec
+
+        validate_ensemble_spec(v04_spec())
+
+    def test_v04_requires_locked_relative_receptor_registry(self) -> None:
+        from peptide_ensemble_core import validate_ensemble_spec
+
+        spec = v04_spec()
+        del spec["receptor_registry_sha256"]
+        with self.assertRaisesRegex(ValueError, "receptor_registry_sha256"):
+            validate_ensemble_spec(spec)
+
+        spec = v04_spec()
+        spec["receptor_registry_path"] = "E:/registry.json"
+        with self.assertRaisesRegex(ValueError, "relative to --data-root"):
+            validate_ensemble_spec(spec)
+
+    def test_v04_peptide_length_must_match_sequence(self) -> None:
+        from peptide_ensemble_core import validate_ensemble_spec
+
+        spec = v04_spec()
+        spec["peptide_length"] = 5
+
+        with self.assertRaisesRegex(ValueError, r"peptide_length 5.*sequence length 4"):
+            validate_ensemble_spec(spec)
+
+    def test_v04_requires_valid_screening_protocol_status(self) -> None:
+        from peptide_ensemble_core import validate_ensemble_spec
+
+        spec = v04_spec()
+        spec["screening_protocol_status"] = "unknown"
+
+        with self.assertRaisesRegex(ValueError, r"screening_protocol_status"):
+            validate_ensemble_spec(spec)
+
+    def test_v04_requires_conformer_provenance_paths(self) -> None:
+        from peptide_ensemble_core import validate_ensemble_spec
+
+        spec = v04_spec()
+        conformers = spec["conformers"]
+        assert isinstance(conformers, list)
+        assert isinstance(conformers[0], dict)
+        del conformers[0]["vina_log_path"]
+
+        with self.assertRaisesRegex(ValueError, r"conformers\[0\].vina_log_path"):
+            validate_ensemble_spec(spec)
+
+    def test_legacy_contact_fraction_denominator_uses_peptide_length(self) -> None:
+        from peptide_ensemble_core import validate_legacy_contact_fraction
+
+        validate_legacy_contact_fraction(
+            {
+                "contact_fraction": 0.3,
+                "contacted_peptide_residues": [1, 4, 10],
+            },
+            peptide_length=10,
+            model=7,
+        )
+        with self.assertRaisesRegex(ValueError, r"MODEL 8.*contact_fraction"):
+            validate_legacy_contact_fraction(
+                {
+                    "contact_fraction": 0.4,
+                    "contacted_peptide_residues": [1, 4, 10],
+                },
+                peptide_length=10,
+                model=8,
+            )
 
 
 class ContactFrequencyTests(unittest.TestCase):
