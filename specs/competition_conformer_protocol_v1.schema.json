@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "competition_conformer_protocol_v1.schema.json",
+  "title": "TfR1 Top40 competition conformer generation protocol",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "protocol_id",
+    "classification",
+    "intended_use",
+    "limitations",
+    "candidate_authority",
+    "chemistry_contract",
+    "software",
+    "embedding",
+    "optimization",
+    "seed",
+    "rmsd",
+    "selection",
+    "fail_closed",
+    "output",
+    "sdf_provenance_fields"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "protocol_id": {"const": "tfr1_top40_sdfgen_competition_v1_b3derived"},
+    "classification": {"const": "COMPETITION_EXPLORATORY_SCREENING"},
+    "intended_use": {"type": "array", "minItems": 3, "items": {"type": "string", "minLength": 1}},
+    "limitations": {"type": "array", "minItems": 3, "items": {"type": "string", "minLength": 1}},
+    "candidate_authority": {"type": "object"},
+    "chemistry_contract": {"type": "object"},
+    "software": {"type": "object"},
+    "embedding": {"type": "object"},
+    "optimization": {"type": "object"},
+    "seed": {"type": "object"},
+    "rmsd": {"type": "object"},
+    "selection": {"type": "object"},
+    "fail_closed": {"type": "object"},
+    "output": {"type": "object"},
+    "sdf_provenance_fields": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+  }
+}
