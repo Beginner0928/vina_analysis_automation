@@ -346,6 +346,7 @@ def run_dry_run(
     *,
     groups: list[str] | None = None,
     candidate_ids: list[str] | None = None,
+    allow_existing_output_root: bool = False,
 ) -> dict[str, Any]:
     manifest_path = manifest_path.resolve()
     protocol_path = protocol_path.resolve()
@@ -516,14 +517,15 @@ def run_dry_run(
         failures.append(failure("global_preflight", "VINA_EXECUTABLE_HASH_MISMATCH", str(exc)))
 
     try:
-        if output_root.exists():
+        if output_root.exists() and not allow_existing_output_root:
             raise FileExistsError(f"Output root already exists: {output_root}")
         parent = output_root.parent
         if not parent.is_dir() or not os.access(parent, os.W_OK):
             raise PermissionError(f"Output parent is not an existing writable directory: {parent}")
         global_checks["output_root"] = {
             "path": str(output_root),
-            "collision": False,
+            "collision": output_root.exists(),
+            "existing_root_allowed_for_resume": allow_existing_output_root,
             "parent_write_access": True,
             "status": "PASS",
         }

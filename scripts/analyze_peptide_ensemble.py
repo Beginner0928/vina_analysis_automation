@@ -230,10 +230,13 @@ def load_json(path: Path) -> dict[str, Any]:
     return value
 
 
-def require_safe_output_directory(path: Path) -> Path:
+def require_safe_output_directory(
+    path: Path, *, allowed_root: Path | None = None
+) -> Path:
     resolved = path.resolve()
-    if not resolved.is_relative_to(TEST_OUTPUT_ROOT):
-        raise ValueError(f"--output-dir must be inside {TEST_OUTPUT_ROOT}: {resolved}")
+    root = (allowed_root or TEST_OUTPUT_ROOT).resolve()
+    if not resolved.is_relative_to(root) or resolved == root:
+        raise ValueError(f"--output-dir must be inside {root}: {resolved}")
     if resolved.exists():
         raise FileExistsError(f"Output directory already exists: {resolved}")
     return resolved
@@ -269,13 +272,19 @@ def resolve_input(
 
 
 def analyze_peptide_ensemble(
-    spec_path: Path, data_root: Path, output_dir: Path
+    spec_path: Path,
+    data_root: Path,
+    output_dir: Path,
+    *,
+    allowed_output_root: Path | None = None,
 ) -> Path:
     resolved_spec = spec_path.resolve()
     spec = load_json(resolved_spec)
     validate_ensemble_spec(spec)
     is_v04 = spec["schema_version"] == "0.4"
-    safe_output = require_safe_output_directory(output_dir)
+    safe_output = require_safe_output_directory(
+        output_dir, allowed_root=allowed_output_root
+    )
     expected_hashes = spec.get("input_sha256", {})
 
     registry_bundle: dict[str, Any] | None = None
