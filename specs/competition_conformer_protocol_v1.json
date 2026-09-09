@@ -1,0 +1,116 @@
+{
+  "schema_version": "1.0",
+  "protocol_id": "tfr1_top40_sdfgen_competition_v1_b3derived",
+  "classification": "COMPETITION_EXPLORATORY_SCREENING",
+  "intended_use": [
+    "uniform Top40 exploratory screening",
+    "reproducible competition workflow",
+    "fair within-protocol comparison"
+  ],
+  "limitations": [
+    "not exhaustive conformational sampling",
+    "not an experimentally validated conformer ensemble",
+    "not a final validated peptide conformational protocol"
+  ],
+  "candidate_authority": {
+    "manifest_id": "tfr1_top40_v05",
+    "path": "vina_analysis_automation/specs/top40_candidates_v05.json",
+    "path_base": "data_root",
+    "sha256": "297c36027fdab031c70f799ca589635bf10349202df065ec0edfb6ed804a112e"
+  },
+  "chemistry_contract": {
+    "contract_id": "v04_formal_standardized_peptide_chemistry",
+    "path": "docking_test/vina_standardized_v04_20260907/chemistry_contract_v04.json",
+    "path_base": "data_root",
+    "sha256": "dd849afa0baa203fbbd4e2c6104b051edf7489b8da8a08fac9305d5696b04a7b"
+  },
+  "software": {
+    "python_version": "3.12.x",
+    "rdkit_version": "2026.03.6"
+  },
+  "embedding": {
+    "method": "ETKDGv3",
+    "requested_source_conformer_count": 30,
+    "use_random_coords": true,
+    "prune_rms_threshold_A": 0.25,
+    "enforce_chirality": true,
+    "num_threads": 1
+  },
+  "optimization": {
+    "force_field": "MMFF94s",
+    "max_iterations": 1000,
+    "num_threads": 1,
+    "eligible_convergence_status": 0,
+    "fallback": "none"
+  },
+  "seed": {
+    "algorithm": "sha256_protocol_colon_candidate_first8_mod2147483646_plus1",
+    "material": "protocol_id + ':' + candidate_id",
+    "minimum": 1,
+    "maximum": 2147483646
+  },
+  "rmsd": {
+    "atoms": "heavy_atoms_only",
+    "correspondence": "fixed_identical_atom_indices",
+    "alignment": "optimal_rigid_body_kabsch",
+    "rdkit_api": "rdMolAlign.GetAlignmentTransform",
+    "hydrogens_included": false
+  },
+  "selection": {
+    "algorithm": "energy_ordered_greedy_all_selected_pairwise_threshold",
+    "energy_order": "MMFF94s_energy_ascending_then_source_conformer_id",
+    "final_conformer_count": 3,
+    "formal_conformer_names": ["conf01", "conf02", "conf03"],
+    "rmsd_threshold_ladder_A": [2.0, 1.5, 1.0, 0.5],
+    "threshold_policy": "highest_full_set_success",
+    "source_conformer_id_semantics": "original_rdkit_conformer_id"
+  },
+  "fail_closed": {
+    "fewer_than_three_converged": true,
+    "no_three_member_set_at_0_5_A": true,
+    "chemistry_mismatch": true,
+    "existing_production_protocol_directory": true,
+    "force_overwrite_supported": false
+  },
+  "output": {
+    "root_template": "standardized_ligands/{protocol_id}",
+    "candidate_directory": "{candidate_id}",
+    "sdf_filename": "{candidate_id}_{formal_conformer_name}.sdf",
+    "manifest_filename": "preparation_manifest.json",
+    "summary_filename": "generation_summary.tsv",
+    "hash_filename": "SHA256SUMS.tsv"
+  },
+  "sdf_provenance_fields": [
+    "CandidateID",
+    "Group",
+    "Sequence",
+    "PeptideLength",
+    "FormalCharge",
+    "AtomCount",
+    "HeavyAtomCount",
+    "GenerationProtocolID",
+    "GenerationProtocolSHA256",
+    "RDKitVersion",
+    "PythonVersion",
+    "Platform",
+    "GenerationSeed",
+    "RequestedSourceConformerCount",
+    "GeneratedSourceConformerCount",
+    "MMFFConvergedConformerCount",
+    "MMFFVariant",
+    "MMFFMaxIterations",
+    "MMFFConvergenceStatus",
+    "SourceConformerID",
+    "FormalConformerOrdinal",
+    "MMFF94sEnergy",
+    "SelectionAlgorithm",
+    "SelectionRMSDThresholdUsed",
+    "PairwiseRMSD_conf01_conf02_A",
+    "PairwiseRMSD_conf01_conf03_A",
+    "PairwiseRMSD_conf02_conf03_A",
+    "ChemistryContractID",
+    "ChemistryContractSHA256",
+    "BondGraphHash",
+    "StereochemistryHash"
+  ]
+}
