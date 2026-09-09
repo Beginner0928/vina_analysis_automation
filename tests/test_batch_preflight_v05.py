@@ -152,6 +152,29 @@ class BatchDryRunTests(unittest.TestCase):
         self.assertEqual("DRY_RUN_FAIL_GLOBAL", result["outcome"])
         self.assertTrue(any(row["error_code"] == "OUTPUT_PATH_COLLISION" for row in result["failures"]))
 
+    def test_existing_output_root_is_allowed_only_for_explicit_resume_preflight(self) -> None:
+        output = unused_output("resume_existing")
+        output.mkdir(parents=True)
+        default = run_dry_run(
+            MANIFEST, PROTOCOL, DATA_ROOT, output, VINA, candidate_ids=["A4"]
+        )
+        resumed = run_dry_run(
+            MANIFEST,
+            PROTOCOL,
+            DATA_ROOT,
+            output,
+            VINA,
+            candidate_ids=["A4"],
+            allow_existing_output_root=True,
+        )
+        self.assertEqual("DRY_RUN_FAIL_GLOBAL", default["outcome"])
+        self.assertEqual("DRY_RUN_PASS", resumed["outcome"])
+        self.assertTrue(
+            resumed["global_checks"]["output_root"][
+                "existing_root_allowed_for_resume"
+            ]
+        )
+
     def test_wrong_locked_contract_hash_is_global_failure(self) -> None:
         manifest, altered = write_contract_fixture(
             "bad_registry_contract",

@@ -59,12 +59,12 @@ class BatchCliTests(unittest.TestCase):
             with self.assertRaises(SystemExit):
                 main(BASE + ["--output-root", str(output), "--groups", "A", "--candidates", "A1"])
 
-    def test_cli_does_not_expose_v05b_flags(self) -> None:
+    def test_cli_still_does_not_expose_force(self) -> None:
         stderr = io.StringIO()
         with contextlib.redirect_stderr(stderr):
             with self.assertRaises(SystemExit):
-                main(BASE + ["--output-root", str(ROOT / "test_output" / uuid.uuid4().hex), "--candidates", "A4", "--resume"])
-        self.assertIn("unrecognized arguments: --resume", stderr.getvalue())
+                main(BASE + ["--output-root", str(ROOT / "test_output" / uuid.uuid4().hex), "--candidates", "A4", "--force"])
+        self.assertIn("unrecognized arguments: --force", stderr.getvalue())
 
 
 if __name__ == "__main__":

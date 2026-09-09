@@ -23,6 +23,7 @@ if str(SCRIPTS_ROOT) not in sys.path:
 from analyze_peptide_ensemble import (  # noqa: E402
     CANDIDATE_COLUMNS,
     build_candidate_summary_row,
+    require_safe_output_directory,
 )
 
 
@@ -80,6 +81,20 @@ REQUIRED_OUTPUTS = {
 
 
 class A4V04IntegrationTests(unittest.TestCase):
+    def test_internal_batch_output_is_narrowly_scoped_to_declared_attempt(self) -> None:
+        attempt = TEST_OUTPUT_ROOT.parent / "external_batch" / uuid.uuid4().hex
+        requested = attempt / "ensemble" / "A4"
+        with self.assertRaisesRegex(ValueError, "inside"):
+            require_safe_output_directory(requested)
+        self.assertEqual(
+            requested.resolve(),
+            require_safe_output_directory(requested, allowed_root=attempt),
+        )
+        with self.assertRaisesRegex(ValueError, "inside"):
+            require_safe_output_directory(
+                attempt.parent / "outside" / "A4", allowed_root=attempt
+            )
+
     def test_v04_outputs_primary_score_and_protocol_provenance(self) -> None:
         output_dir = TEST_OUTPUT_ROOT / f"A4_v04_{uuid.uuid4().hex}" / "A4"
         completed = subprocess.run(
