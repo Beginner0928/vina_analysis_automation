@@ -16,6 +16,10 @@
     "inventory_id": {"type": "string", "minLength": 1},
     "candidate_manifest_sha256": {"type": "string", "pattern": "[0-9a-f]{64}"},
     "expected_slot_count": {"type": "integer", "minimum": 1},
+    "approved_exploratory_slot_count": {"type": "integer", "minimum": 0},
+    "qc_excluded_slot_count": {"type": "integer", "minimum": 0},
+    "partial_package": {"type": "object"},
+    "ligand_preparation_contract_sha256": {"type": "string", "pattern": "[0-9a-f]{64}"},
     "slots": {
       "type": "array",
       "minItems": 1,
@@ -28,13 +32,26 @@
           "candidate_id": {"type": "string", "pattern": "[ABCD](?:[1-9]|10)"},
           "conformer_name": {"type": "string", "minLength": 1},
           "readiness_status": {
-            "enum": ["approved_for_formal_screening", "conversion_audit_only", "not_prepared"]
+            "enum": [
+              "approved_for_formal_screening",
+              "approved_for_exploratory_screening",
+              "conversion_audit_only",
+              "not_prepared",
+              "conformer_generation_qc_fail_not_docked"
+            ]
           },
           "source_sdf_path": {"type": "string", "minLength": 1},
           "source_sdf_sha256": {"type": "string", "pattern": "[0-9a-f]{64}"},
           "audit_path": {"type": "string", "minLength": 1},
           "audit_sha256": {"type": "string", "pattern": "[0-9a-f]{64}"},
-          "approval_basis": {"type": "string", "minLength": 1}
+          "approval_basis": {"type": "string", "minLength": 1},
+          "ligand_pdbqt_path": {"type": "string", "minLength": 1},
+          "ligand_pdbqt_sha256": {"type": "string", "pattern": "[0-9a-f]{64}"},
+          "pdbqt_audit_path": {"type": "string", "minLength": 1},
+          "pdbqt_audit_sha256": {"type": "string", "pattern": "[0-9a-f]{64}"},
+          "generation_provenance": {"type": "object"},
+          "exclusion_reason": {"type": "string", "minLength": 1},
+          "screening_status": {"type": "string", "minLength": 1}
         }
       }
     }

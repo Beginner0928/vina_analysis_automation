@@ -16,7 +16,13 @@ FORMAL_TOP40_IDS = tuple(
 )
 SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 READINESS_STATUSES = frozenset(
-    {"approved_for_formal_screening", "conversion_audit_only", "not_prepared"}
+    {
+        "approved_for_formal_screening",
+        "approved_for_exploratory_screening",
+        "conversion_audit_only",
+        "not_prepared",
+        "conformer_generation_qc_fail_not_docked",
+    }
 )
 FROZEN_DOCKING_PROTOCOL = {
     "engine": "AutoDock Vina",
@@ -278,18 +284,50 @@ def validate_ligand_inventory(
         if slot.get("readiness_status") not in READINESS_STATUSES:
             raise ValueError(f"Invalid readiness status for ligand slot {key}")
         status = slot["readiness_status"]
-        artifact_fields = ("source_sdf_path", "source_sdf_sha256", "audit_path", "audit_sha256")
-        if status == "not_prepared":
+        artifact_fields = (
+            "source_sdf_path",
+            "source_sdf_sha256",
+            "audit_path",
+            "audit_sha256",
+            "ligand_pdbqt_path",
+            "ligand_pdbqt_sha256",
+            "pdbqt_audit_path",
+            "pdbqt_audit_sha256",
+        )
+        if status in {"not_prepared", "conformer_generation_qc_fail_not_docked"}:
             if any(field in slot for field in artifact_fields):
                 raise ValueError(f"Unprepared ligand slot {key} must not fabricate artifact provenance")
+            if status == "conformer_generation_qc_fail_not_docked" and slot.get(
+                "exclusion_reason"
+            ) != "CONFORMER_GENERATION_QC_FAIL":
+                raise ValueError(f"QC-excluded ligand slot {key} has the wrong exclusion reason")
         else:
-            missing = [field for field in artifact_fields if field not in slot]
+            required_fields = list(artifact_fields[:4])
+            if status == "approved_for_exploratory_screening":
+                required_fields.extend(artifact_fields[4:])
+                required_fields.append("generation_provenance")
+            missing = [field for field in required_fields if field not in slot]
             if missing:
-                raise ValueError(f"Ligand slot {key} is missing provenance fields: {missing}")
-            for field in ("source_sdf_path", "audit_path"):
+                label = "PDBQT/provenance" if status == "approved_for_exploratory_screening" else "provenance"
+                raise ValueError(f"Ligand slot {key} is missing {label} fields: {missing}")
+            for field in (
+                "source_sdf_path",
+                "audit_path",
+                "ligand_pdbqt_path",
+                "pdbqt_audit_path",
+            ):
+                if field not in slot:
+                    continue
                 if Path(slot[field]).is_absolute():
                     raise ValueError(f"Ligand slot {key} {field} must be relative to --data-root")
-            for field in ("source_sdf_sha256", "audit_sha256"):
+            for field in (
+                "source_sdf_sha256",
+                "audit_sha256",
+                "ligand_pdbqt_sha256",
+                "pdbqt_audit_sha256",
+            ):
+                if field not in slot:
+                    continue
                 if not SHA256_PATTERN.fullmatch(str(slot[field]).lower()):
                     raise ValueError(f"Ligand slot {key} {field} must be SHA-256")
         by_key[key] = slot

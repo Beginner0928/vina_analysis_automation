@@ -73,6 +73,14 @@ def identity_digest(identity: dict[str, Any]) -> str:
     return hashlib.sha256(canonical_json_bytes(identity)).hexdigest()
 
 
+def candidate_selection_sha256(candidate_ids: list[str]) -> str:
+    if not candidate_ids:
+        raise ValueError("candidate selection must not be empty")
+    if len(candidate_ids) != len(set(candidate_ids)):
+        raise ValueError("candidate selection contains a duplicate")
+    return hashlib.sha256(canonical_json_bytes(candidate_ids)).hexdigest()
+
+
 def file_sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -897,6 +905,16 @@ def build_candidate_identity(
                 "audit_path": row["audit_path"],
                 "audit_sha256": row["audit_sha256"],
                 "approval_basis": row.get("approval_basis"),
+                **{
+                    field: row[field]
+                    for field in (
+                        "ligand_pdbqt_path",
+                        "ligand_pdbqt_sha256",
+                        "pdbqt_audit_path",
+                        "pdbqt_audit_sha256",
+                    )
+                    if field in row
+                },
             }
         )
         if row.get("generation_provenance") is not None:
@@ -1305,6 +1323,10 @@ def execute_batch(
         }
         batch_identity = {
             "schema_version": "0.5b",
+            "selected_candidate_ids": list(preflight["selected_candidate_ids"]),
+            "selected_candidate_set_sha256": candidate_selection_sha256(
+                list(preflight["selected_candidate_ids"])
+            ),
             "candidate_manifest_sha256": file_sha256(manifest_path),
             "screening_protocol_sha256": file_sha256(protocol_path),
             "ligand_inventory_sha256": file_sha256(inventory_path),

@@ -24,6 +24,7 @@ from batch_execution_v05 import (  # noqa: E402
     REQUIRED_ANALYSIS_FILES,
     V04_FROZEN_ENSEMBLE_RULES,
     build_candidate_identity,
+    candidate_selection_sha256,
     build_ensemble_spec,
     create_attempt,
     execute_planned_batch,
@@ -115,6 +116,13 @@ class CandidateStateTests(unittest.TestCase):
 
 
 class AttemptIdentityTests(unittest.TestCase):
+    def test_batch_candidate_selection_digest_is_order_sensitive(self) -> None:
+        expected = candidate_selection_sha256(["A4", "B3"])
+        self.assertRegex(expected, r"^[0-9a-f]{64}$")
+        self.assertNotEqual(expected, candidate_selection_sha256(["B3", "A4"]))
+        with self.assertRaisesRegex(ValueError, "duplicate"):
+            candidate_selection_sha256(["A4", "A4"])
+
     def test_attempt_id_is_auditable_and_deterministic_for_supplied_time(self) -> None:
         created = datetime(2026, 9, 8, 12, 34, 56, tzinfo=timezone.utc)
         attempt_id = make_attempt_id(identity_fixture(), created)
@@ -835,6 +843,10 @@ class ProductionContractConstructionTests(unittest.TestCase):
                     "source_sdf_sha256": str(index + 1) * 64,
                     "audit_path": f"audit/X1_conf0{index + 1}.json",
                     "audit_sha256": str(index + 3) * 64,
+                    "ligand_pdbqt_path": f"prepared/X1_conf0{index + 1}.pdbqt",
+                    "ligand_pdbqt_sha256": str(index + 5) * 64,
+                    "pdbqt_audit_path": f"prepared/X1_conf0{index + 1}.json",
+                    "pdbqt_audit_sha256": str(index + 7) * 64,
                     "approval_basis": "formal",
                 }
             )
@@ -867,6 +879,11 @@ class ProductionContractConstructionTests(unittest.TestCase):
             identity["ligand_generation_provenance"]["status"],
         )
         self.assertEqual(2, len(identity["conformers"]))
+        self.assertEqual(
+            "prepared/X1_conf01.pdbqt",
+            identity["conformers"][0]["ligand_pdbqt_path"],
+        )
+        self.assertEqual("5" * 64, identity["conformers"][0]["ligand_pdbqt_sha256"])
         self.assertNotIn("A4", json.dumps(identity))
         self.assertNotIn("B3", json.dumps(identity))
 

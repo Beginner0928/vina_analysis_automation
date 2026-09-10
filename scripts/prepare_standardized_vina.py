@@ -168,7 +168,32 @@ def prepare_one(
     copied_sdf = output_root / "source_sdf" / f"{run_id}.sdf"
     copy_verified_once(source_sdf, copied_sdf, conformer["source_sdf_sha256"])
     ligand_pdbqt = output_root / "ligands" / f"{run_id}.pdbqt"
-    prep_audit = prepare_backbone_rigid_ligand(copied_sdf, ligand_pdbqt)
+    if "ligand_pdbqt_path" in conformer or "ligand_pdbqt_sha256" in conformer:
+        if not {"ligand_pdbqt_path", "ligand_pdbqt_sha256"}.issubset(conformer):
+            raise ValueError(
+                f"{conformer_name} must provide both ligand_pdbqt_path and ligand_pdbqt_sha256"
+            )
+        source_pdbqt = resolve_read_only(
+            data_root,
+            conformer["ligand_pdbqt_path"],
+            f"{conformer_name}.ligand_pdbqt_path",
+        )
+        copied_pdbqt_hash = copy_verified_once(
+            source_pdbqt, ligand_pdbqt, conformer["ligand_pdbqt_sha256"]
+        )
+        source_pdbqt_audit = audit_ligand_pdbqt(source_pdbqt, source_sdf, spec["sequence"])
+        prep_audit = {
+            "source_sdf_sha256": source_audit["sha256"],
+            "generated_pdbqt_sha256": copied_pdbqt_hash,
+            "source_prepared_pdbqt_path": conformer["ligand_pdbqt_path"],
+            "source_prepared_pdbqt_sha256": source_pdbqt_audit["sha256"],
+            "materialization_mode": "copied_hash_locked_preprepared_pdbqt",
+            "coordinates_regenerated": False,
+            "meeko_index_map_present": True,
+        }
+    else:
+        prep_audit = prepare_backbone_rigid_ligand(copied_sdf, ligand_pdbqt)
+        prep_audit["materialization_mode"] = "generated_from_standardized_sdf"
     pdbqt_audit = audit_ligand_pdbqt(ligand_pdbqt, copied_sdf, spec["sequence"])
     coordinate_audit = compare_pdbqt_coordinates(copied_sdf, ligand_pdbqt)
 

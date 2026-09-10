@@ -105,9 +105,10 @@ def audit_source_sdf(
             for source_atom, template_atom in zip(source_heavy, template_heavy)
         ),
     }
+    expected_n_terminal_hydrogens = 2 if sequence.startswith("P") else 3
     expected_checks = {
         "n_terminus_formal_charge": 1,
-        "n_terminus_hydrogen_count": 3,
+        "n_terminus_hydrogen_count": expected_n_terminal_hydrogens,
         "c_terminus_oxt_formal_charge": -1,
         "c_terminus_oxt_hydrogen_count": 0,
         "sulfur_sulfur_bond_count": 0,
@@ -122,6 +123,12 @@ def audit_source_sdf(
     }
     if mismatches:
         raise ValueError(f"SDF formal chemistry checks failed for {path.name}: {mismatches}")
+    chemistry_checks["n_terminus_rule_status"] = "PASS"
+    chemistry_checks["n_terminus_rule"] = (
+        "protonated_proline_NH2_plus"
+        if sequence.startswith("P")
+        else "protonated_primary_NH3_plus"
+    )
     return {
         "path": str(path.resolve()),
         "sha256": sha256(path),
