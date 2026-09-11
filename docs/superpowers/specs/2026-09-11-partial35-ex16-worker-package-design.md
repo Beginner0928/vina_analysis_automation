@@ -1,6 +1,6 @@
 # PARTIAL35 ex16 portable Windows worker package design
 
-Status: proposed and frozen for written review; implementation is not authorized by this document.
+Status: approved with the 2026-09-11 variable-model-count amendment; implementation is authorized only in the isolated worktree defined below.
 
 Date: 2026-09-11
 
@@ -19,7 +19,7 @@ audited PDBQT + frozen receptor + frozen ex16 protocol
 
 The package is a transport and execution layer for an already frozen scientific protocol. It does not define a new scientific protocol, regenerate conformers, run Meeko, modify ligand or receptor bytes, analyze or rank candidates, or infer work allocation from host completion state.
 
-Writing and committing this design document is the only authorized change before written spec approval. Implementation must occur later in an independent Git worktree. No implementation step may stop, pause, kill, restart, resume, modify, or otherwise interfere with the active host ex16 batch.
+The initial design received written approval subject to the variable-model-count amendment in this revision. Implementation must occur in an independent Git worktree. No implementation step may stop, pause, kill, restart, resume, modify, or otherwise interfere with the active host ex16 batch.
 
 ## 2. Frozen scientific identity
 
@@ -41,6 +41,8 @@ The following values are exact, mandatory, and fail-closed. They are copied into
 | `seed` | `1701` |
 | `cpu` | `8` |
 | Vina process concurrency | `1` |
+
+`num_modes = 20` is the frozen maximum number of modes requested from Vina, not a requirement that every successful output contain exactly 20 models. A valid output contains `actual_model_count` models where `1 <= actual_model_count <= 20`, with labels exactly `1..actual_model_count` and a parseable `REMARK VINA RESULT` in every model block. This interpretation does not change the scientific parameter or protocol identity.
 
 The current binary is copied byte-for-byte to `vina/vina.exe`; it is never downloaded, updated, patched, or replaced. The worker may not accept a `--vina` override. Package and runtime validation both reject any binary drift.
 
@@ -112,6 +114,10 @@ The host importer writes only beneath a new exclusive directory:
 `<HOST_EX16_ROOT>/incoming_worker_results/<import_id>/`
 
 It treats `<HOST_EX16_ROOT>/batch_run/` as read-only comparison evidence and never publishes into it. Failed or incomplete imports are retained for audit; automated cleanup and deletion are out of scope.
+
+### 4.4 Host A5 interruption provenance
+
+The original host A5 attempt is classified `TECHNICAL_INCOMPLETE_NOT_SCIENTIFIC_FAILURE`. Its `conf01` and `conf02` evidence remains retained, but A5 has no valid candidate completion because `conf03` was interrupted before a run-status/output completion record existed. The approved host resume records A5 as `FAILED_PREFLIGHT` / `RESUME_NO_VALID_COMPLETE_ATTEMPT`, does not rerun `A5_conf03`, and continues from A6. This is an operational provenance fact only: it is not a binding-energy result, biological failure, completed-candidate claim, or package-creation-time allocation rule. A5 remains in the full worker allowlist and may be allocated only by a later explicit human `-Candidates` decision.
 
 ## 5. Proposed package layout
 
@@ -209,6 +215,7 @@ The projection excludes `package_manifest.json`, `PACKAGE_MANIFEST_SHA256.txt`, 
       "scoring_function": "vina",
       "exhaustiveness": 16,
       "num_modes": 20,
+      "num_modes_semantics": "maximum_requested_modes",
       "energy_range": 5,
       "seed": 1701,
       "cpu": 8,
@@ -448,8 +455,9 @@ Vina writes only to the attempt's `.partial` paths. A conformer is COMPLETE only
 
 - process exit code is zero;
 - output exists and is nonempty;
-- model labels are exactly 1 through 20, without duplicates or omissions;
-- every model has a parseable `REMARK VINA RESULT` score;
+- `actual_model_count` is between 1 and the frozen requested maximum `num_modes = 20`, inclusive;
+- model blocks are well formed and their labels, in file order, are exactly `1..actual_model_count`, without duplicates, gaps, or extra labels;
+- every model block has a parseable `REMARK VINA RESULT` score;
 - input, config, executable, log, and output hashes are recorded;
 - the result manifest is valid and exclusively created;
 - a fresh `complete_result.json` seal points to that immutable attempt.
@@ -516,10 +524,26 @@ Each complete conformer result records:
 - ligand path/hash and source audit hash;
 - generated config bytes/hash;
 - start/end timestamps, elapsed observation, command arguments with package-relative paths, and exit code;
-- output/log paths, sizes, hashes, model labels, model count, and Vina scores;
+- output/log paths, sizes, hashes, model labels, mandatory `actual_model_count`, and Vina scores;
 - output audit status and completion seal hash.
 
 No command record contains an absolute local path. Paths in manifests are normalized package- or run-relative paths.
+
+The output-audit portion has the following required shape; `num_modes_requested` remains the frozen scientific setting and is never inferred from the observed count:
+
+```json
+{
+  "output_audit": {
+    "status": "PASS",
+    "num_modes_requested": 20,
+    "actual_model_count": 17,
+    "model_labels": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+    "vina_result_scores": [-7.1, -6.9, -6.8, -6.7, -6.6, -6.5, -6.4, -6.3, -6.2, -6.1, -6.0, -5.9, -5.8, -5.7, -5.6, -5.5, -5.4]
+  }
+}
+```
+
+`actual_model_count` equals the number of well-formed `MODEL`/`ENDMDL` blocks, the length of `model_labels`, and the length of `vina_result_scores`. It must satisfy `1 <= actual_model_count <= num_modes_requested`; labels must equal the integer sequence `1..actual_model_count`. Zero blocks, more than 20 blocks, duplicate/out-of-order/gapped labels, malformed blocks, or a block without a parseable `REMARK VINA RESULT` fail the audit and cannot produce a completion seal.
 
 ### 10.4 Result bundle manifest
 
@@ -538,7 +562,7 @@ The importer performs validation before comparison:
 1. Safely stage the result bundle under a new `incoming_worker_results/<import_id>/` directory.
 2. Reject traversal, links/reparse points, unlisted files, duplicate paths, invalid schemas, or content-hash mismatches.
 3. Verify package, protocol, Vina, candidate allocation, machine, ligand, receptor, config, output, and state-history identities.
-4. Re-audit each claimed COMPLETE output for exit success, 20 model labels, Vina result remarks, and hashes.
+4. Re-audit each claimed COMPLETE output for exit success, `1 <= actual_model_count <= 20`, exact contiguous labels `1..actual_model_count`, one or more parseable Vina result remarks in every corresponding model block as required by the output schema, and hashes.
 5. Reject incomplete/failed evidence as valid screening results while retaining it for audit.
 6. Compare each imported candidate against the active ex16 host batch and prior incoming imports. Never inspect ex32 results for completion or comparison.
 7. Write one immutable import audit and one candidate comparison report per candidate. Do not write into `batch_run`.
@@ -557,7 +581,7 @@ For `DUPLICATE_OR_CONFLICT`, the report compares at minimum:
 - all three ligand hashes;
 - receptor identity and hash;
 - Vina identity and settings;
-- each conformer output hash, model count, and score vector;
+- each conformer output hash, `actual_model_count`, exact model-label vector, and score vector;
 - worker/package/run/machine identities and timestamps.
 
 The report may add a nonauthoritative detail such as `BYTE_IDENTICAL_DUPLICATE` or `CONTENT_CONFLICT`, but the top-level state remains `DUPLICATE_OR_CONFLICT`. The importer never selects the newer result, never resolves a conflict, never marks host completion, and never overwrites either copy. Human acceptance into any scientific result set is a later, separately authorized operation.
@@ -573,7 +597,7 @@ The report may add a nonauthoritative detail such as `BYTE_IDENTICAL_DUPLICATE` 
 | Attempt to split one candidate | Allocation/state contract requires all three conformers in one run and machine identity. |
 | Two runners use one run directory | OS-exclusive lock acquisition fails for the second runner. |
 | Crash, Ctrl+C, shutdown, sleep, or Vina failure | Attempt remains immutable and incomplete; no completion seal; resume creates or explicitly recovers an attempt after full revalidation. |
-| Truncated/parseable-looking output | Exit, model labels, remarks, size, and hash gates prevent completion. |
+| Truncated/parseable-looking output | Exit, well-formed block, `1..actual_model_count` label, per-model remark, size, and hash gates prevent completion. |
 | Disk full or permission loss | Exclusive write fails; run pauses with retained evidence and no overwrite/cleanup. |
 | Malicious or malformed ZIP/path traversal | Normalized relative-path checks and safe extraction reject the bundle. |
 | Clock drift | UUID provides uniqueness; timestamps are provenance only and never establish result precedence. |
@@ -620,8 +644,12 @@ Tests must not launch a production docking job or write to the live batch. All m
 - Fake-Vina integration test proves maximum concurrent docking processes equals one.
 - Prove candidate order and conformer order are deterministic.
 - Prove a candidate's three conformers remain in one run/machine allocation.
-- Accept only exit zero plus exactly 20 models and 20 parseable Vina result remarks.
-- Reject missing, duplicate, out-of-order, truncated, empty, or extra model labels as specified by the parser contract.
+- Accept exit zero with exactly 20 contiguous models and a parseable Vina result remark in every model block.
+- Accept exit zero with exactly 17 contiguous models and a parseable Vina result remark in every model block.
+- Accept exit zero with exactly 1 model and a parseable Vina result remark in its model block.
+- Reject 0 models and reject 21 models.
+- Reject label gaps such as `1,2,4`, duplicate labels, out-of-order labels, malformed/truncated model blocks, and any model missing a parseable `REMARK VINA RESULT`.
+- Verify every successful conformer result and host import audit records the exact `actual_model_count` while retaining frozen `num_modes = 20` as the requested scientific setting.
 - Verify config contains exact receptor/ligand relative paths, box, and frozen settings.
 - Verify outputs/logs/configs and manifests are exclusive-create and hash recorded.
 
