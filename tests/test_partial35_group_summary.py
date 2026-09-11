@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 import sys
+import copy
+import hashlib
+import json
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -11,7 +15,11 @@ if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
 from partial35_contract_v05 import PARTIAL35_CANDIDATE_IDS  # noqa: E402
-from summarize_partial35_screen import build_group_summaries  # noqa: E402
+from candidate_manifest_v05 import PARTIAL35_EX16_PROTOCOL_ID  # noqa: E402
+from summarize_partial35_screen import (  # noqa: E402
+    build_group_summaries,
+    validate_ex16_batch_identity,
+)
 
 
 class Partial35GroupSummaryTests(unittest.TestCase):
@@ -86,6 +94,68 @@ class Partial35GroupSummaryTests(unittest.TestCase):
         self.assertEqual(1, group_a["technical_failure_candidate_count"])
         self.assertEqual("FAILED_DOCKING", group_a["candidate_statuses"][0]["state"])
         self.assertNotIn("global_rank", group_a)
+
+    def test_summary_accepts_only_the_matching_ex16_batch_protocol(self) -> None:
+        protocol = json.loads(
+            (ROOT / "specs" / "screening_protocol_v05.json").read_text(encoding="utf-8")
+        )
+        protocol["protocol_id"] = PARTIAL35_EX16_PROTOCOL_ID
+        protocol["docking_protocol"]["exhaustiveness"] = 16
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            protocol_path = root / "protocol.json"
+            protocol_path.write_text(json.dumps(protocol), encoding="utf-8", newline="\n")
+            digest = hashlib.sha256(protocol_path.read_bytes()).hexdigest()
+            batch_root = root / "batch"
+            batch_root.mkdir()
+            (batch_root / "batch_manifest.json").write_text(
+                json.dumps(
+                    {
+                        "batch_identity": {
+                            "screening_protocol_sha256": digest,
+                        }
+                    }
+                ),
+                encoding="utf-8",
+                newline="\n",
+            )
+
+            result = validate_ex16_batch_identity(batch_root, protocol_path)
+
+            self.assertEqual(PARTIAL35_EX16_PROTOCOL_ID, result["protocol_id"])
+            self.assertEqual("COMPETITION_EXPLORATORY_SCREENING", result["classification"])
+            self.assertEqual(digest, result["protocol_sha256"])
+
+    def test_summary_rejects_ex32_or_hash_mismatched_batch_identity(self) -> None:
+        protocol = json.loads(
+            (ROOT / "specs" / "screening_protocol_v05.json").read_text(encoding="utf-8")
+        )
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            protocol_path = root / "protocol.json"
+            protocol_path.write_text(json.dumps(protocol), encoding="utf-8", newline="\n")
+            batch_root = root / "batch"
+            batch_root.mkdir()
+            (batch_root / "batch_manifest.json").write_text(
+                json.dumps(
+                    {
+                        "batch_identity": {
+                            "screening_protocol_sha256": "0" * 64,
+                        }
+                    }
+                ),
+                encoding="utf-8",
+                newline="\n",
+            )
+            with self.assertRaisesRegex(ValueError, "ex16"):
+                validate_ex16_batch_identity(batch_root, protocol_path)
+
+            ex16 = copy.deepcopy(protocol)
+            ex16["protocol_id"] = PARTIAL35_EX16_PROTOCOL_ID
+            ex16["docking_protocol"]["exhaustiveness"] = 16
+            protocol_path.write_text(json.dumps(ex16), encoding="utf-8", newline="\n")
+            with self.assertRaisesRegex(ValueError, "hash"):
+                validate_ex16_batch_identity(batch_root, protocol_path)
 
 
 if __name__ == "__main__":

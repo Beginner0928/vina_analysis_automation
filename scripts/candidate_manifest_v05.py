@@ -34,6 +34,11 @@ FROZEN_DOCKING_PROTOCOL = {
     "seed": 1701,
     "cpu": 8,
 }
+PARTIAL35_EX16_PROTOCOL_ID = "tfr1_partial35_competition_exploratory_ex16_v05"
+FROZEN_PARTIAL35_EX16_DOCKING_PROTOCOL = {
+    **FROZEN_DOCKING_PROTOCOL,
+    "exhaustiveness": 16,
+}
 FROZEN_LIGAND_PREPARATION = {
     "protocol_id": "gpt_manual_standardized_ph74_meeko080_backbone_rigid_v1",
     "source_coordinates": "preselected_standardized_SDF_no_regeneration",
@@ -244,7 +249,21 @@ def validate_screening_protocol(
             raise ValueError(
                 "Screening protocol differs from frozen V0.4 ligand preparation values"
             )
-        if protocol.get("docking_protocol") != FROZEN_DOCKING_PROTOCOL:
+        protocol_id = protocol.get("protocol_id")
+        expected_docking_protocol = (
+            FROZEN_PARTIAL35_EX16_DOCKING_PROTOCOL
+            if protocol_id == PARTIAL35_EX16_PROTOCOL_ID
+            else FROZEN_DOCKING_PROTOCOL
+        )
+        if protocol.get("docking_protocol") != expected_docking_protocol:
+            if protocol_id == PARTIAL35_EX16_PROTOCOL_ID:
+                raise ValueError(
+                    "Screening protocol differs from the frozen partial35 ex16 Vina parameters"
+                )
+            if protocol.get("docking_protocol") == FROZEN_PARTIAL35_EX16_DOCKING_PROTOCOL:
+                raise ValueError(
+                    "The partial35 ex16 Vina parameters require the explicit ex16 protocol identity"
+                )
             raise ValueError("Screening protocol differs from frozen V0.4 formal Vina parameters")
         if count != 3 or names != ["conf01", "conf02", "conf03"]:
             raise ValueError("Formal V0.5 protocol requires the approved three conformers")

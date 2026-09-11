@@ -12,10 +12,16 @@ from pathlib import Path
 from typing import Any
 
 from batch_execution_v05 import file_sha256
+from candidate_manifest_v05 import (
+    PARTIAL35_EX16_PROTOCOL_ID,
+    load_json_contract,
+    validate_screening_protocol,
+)
 from partial35_contract_v05 import EXCLUDED_CANDIDATES, PARTIAL35_CANDIDATE_IDS
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+SCREENING_CLASSIFICATION = "COMPETITION_EXPLORATORY_SCREENING"
 
 GROUP_SUMMARY_FIELDS = (
     "group",
@@ -217,11 +223,35 @@ def _load_complete_candidate_row(batch_root: Path, candidate_id: str) -> dict[st
     return rows[0]
 
 
-def summarize_partial35(batch_root: Path, output_root: Path) -> Path:
+def validate_ex16_batch_identity(batch_root: Path, protocol_path: Path) -> dict[str, str]:
+    protocol = load_json_contract(
+        protocol_path,
+        PROJECT_ROOT / "specs" / "screening_protocol_v05.schema.json",
+    )
+    validate_screening_protocol(protocol)
+    if protocol.get("protocol_id") != PARTIAL35_EX16_PROTOCOL_ID:
+        raise ValueError("PARTIAL35 summary requires the frozen ex16 exploratory protocol")
+    protocol_hash = file_sha256(protocol_path)
+    manifest_path = batch_root / "batch_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    actual_hash = manifest.get("batch_identity", {}).get("screening_protocol_sha256")
+    if actual_hash != protocol_hash:
+        raise ValueError(
+            "PARTIAL35 batch screening protocol hash does not match the supplied ex16 protocol"
+        )
+    return {
+        "protocol_id": PARTIAL35_EX16_PROTOCOL_ID,
+        "protocol_sha256": protocol_hash,
+        "classification": SCREENING_CLASSIFICATION,
+    }
+
+
+def summarize_partial35(batch_root: Path, output_root: Path, protocol_path: Path) -> Path:
     if output_root.resolve().is_relative_to(PROJECT_ROOT):
         raise ValueError("PARTIAL35 scientific summary output must remain outside the Git repository")
     if output_root.exists():
         raise FileExistsError(f"Refusing to overwrite existing PARTIAL35 summary: {output_root}")
+    protocol_identity = validate_ex16_batch_identity(batch_root, protocol_path)
     batch_runs = sorted((batch_root / "batch_runs").glob("[0-9][0-9][0-9][0-9].json"))
     if not batch_runs:
         raise FileNotFoundError("PARTIAL35 batch has no batch run record")
@@ -242,7 +272,8 @@ def summarize_partial35(batch_root: Path, output_root: Path) -> Path:
         json.dump(
             {
                 "schema_version": "0.5-partial35-summary",
-                "package_classification": "PARTIAL_EXPLORATORY_SCREENING",
+                "package_classification": SCREENING_CLASSIFICATION,
+                "screening_protocol": protocol_identity,
                 "completeness_statement": "NOT_A_COMPLETE_TOP40_SCREEN",
                 "screened_candidate_count": 35,
                 "technically_complete_candidate_count": len(complete_ids),
@@ -289,6 +320,11 @@ def summarize_partial35(batch_root: Path, output_root: Path) -> Path:
         "x", encoding="utf-8", newline="\n"
     ) as handle:
         handle.write("# PARTIAL35 exploratory screening summary\n\n")
+        handle.write(f"Classification: `{SCREENING_CLASSIFICATION}`\n\n")
+        handle.write(
+            f"Protocol: `{protocol_identity['protocol_id']}` "
+            f"(`{protocol_identity['protocol_sha256']}`)\n\n"
+        )
         handle.write("This is not a complete Top40 screen. Comparisons are within group only.\n\n")
         handle.write("The reported values are AutoDock Vina predicted docking scores, not experimental binding free energies.\n\n")
         for row in summaries:
@@ -306,9 +342,14 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--batch-root", type=Path, required=True)
     parser.add_argument("--output-root", type=Path, required=True)
+    parser.add_argument("--protocol", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
-        output = summarize_partial35(args.batch_root.resolve(), args.output_root.resolve())
+        output = summarize_partial35(
+            args.batch_root.resolve(),
+            args.output_root.resolve(),
+            args.protocol.resolve(),
+        )
     except Exception as exc:
         print(f"[ERROR] {exc}", file=sys.stderr)
         return 1
