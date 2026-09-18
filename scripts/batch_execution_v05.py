@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import csv
 import json
+import math
 from datetime import datetime, timezone
 from dataclasses import dataclass
 from enum import Enum
@@ -71,6 +72,14 @@ def canonical_json_bytes(value: Any) -> bytes:
 
 def identity_digest(identity: dict[str, Any]) -> str:
     return hashlib.sha256(canonical_json_bytes(identity)).hexdigest()
+
+
+def candidate_selection_sha256(candidate_ids: list[str]) -> str:
+    if not candidate_ids:
+        raise ValueError("candidate selection must not be empty")
+    if len(candidate_ids) != len(set(candidate_ids)):
+        raise ValueError("candidate selection contains a duplicate")
+    return hashlib.sha256(canonical_json_bytes(candidate_ids)).hexdigest()
 
 
 def file_sha256(path: Path) -> str:
@@ -494,18 +503,65 @@ class ExecutionAdapters:
     analyze_candidate: AnalysisFunction
 
 
-def validate_vina_result(result: dict[str, Any], expected_model_labels: list[int]) -> None:
+def validate_vina_result(
+    result: dict[str, Any],
+    expected_model_labels: list[int] | None = None,
+    *,
+    model_count_range: tuple[int, int] | None = None,
+    require_parseable_vina_result_per_model: bool = False,
+) -> None:
     if result.get("complete") is not True or result.get("exit_code") != 0:
         raise RuntimeError(
             f"Vina exit was not successful: complete={result.get('complete')!r}, "
             f"exit_code={result.get('exit_code')!r}"
         )
     labels = result.get("model_labels")
-    if labels != expected_model_labels:
+    if not isinstance(labels, list) or any(
+        isinstance(label, bool) or not isinstance(label, int) for label in labels
+    ):
+        raise RuntimeError(f"Vina MODEL labels are invalid: {labels!r}")
+    if expected_model_labels is not None and model_count_range is not None:
+        raise ValueError("Choose exact expected_model_labels or model_count_range, not both")
+    if expected_model_labels is not None and labels != expected_model_labels:
         raise RuntimeError(
             f"Vina MODEL labels differ from the frozen protocol: "
             f"expected={expected_model_labels!r}, actual={labels!r}"
         )
+    if model_count_range is not None:
+        minimum, maximum = model_count_range
+        if minimum < 1 or maximum < minimum:
+            raise ValueError(f"Invalid Vina MODEL count range: {model_count_range!r}")
+        count = len(labels)
+        expected_contiguous = list(range(1, count + 1))
+        if count < minimum or count > maximum or labels != expected_contiguous:
+            raise RuntimeError(
+                "Vina MODEL labels violate the ranged protocol: "
+                f"required_count={minimum}..{maximum}, required_labels=1..N, actual={labels!r}"
+            )
+    if expected_model_labels is None and model_count_range is None:
+        raise ValueError("A Vina MODEL validation contract is required")
+    if require_parseable_vina_result_per_model:
+        raw_scores = result.get("vina_scores")
+        if not isinstance(raw_scores, dict):
+            raise RuntimeError("Vina score evidence is missing for MODEL records")
+        scores: dict[int, Any] = {}
+        for raw_label, score in raw_scores.items():
+            try:
+                label = int(raw_label)
+            except (TypeError, ValueError) as exc:
+                raise RuntimeError(f"Vina score has an invalid MODEL key: {raw_label!r}") from exc
+            if label in scores:
+                raise RuntimeError(f"Duplicate Vina score evidence for MODEL {label}")
+            scores[label] = score
+        if set(scores) != set(labels):
+            raise RuntimeError(
+                f"Vina score MODEL coverage differs from output labels: "
+                f"labels={labels!r}, score_models={sorted(scores)!r}"
+            )
+        for label in labels:
+            score = scores[label]
+            if isinstance(score, bool) or not isinstance(score, (int, float)) or not math.isfinite(float(score)):
+                raise RuntimeError(f"REMARK VINA RESULT score is not parseable for MODEL {label}")
 
 
 def _batch_failure(code: str, message: str) -> dict[str, Any]:
@@ -897,6 +953,16 @@ def build_candidate_identity(
                 "audit_path": row["audit_path"],
                 "audit_sha256": row["audit_sha256"],
                 "approval_basis": row.get("approval_basis"),
+                **{
+                    field: row[field]
+                    for field in (
+                        "ligand_pdbqt_path",
+                        "ligand_pdbqt_sha256",
+                        "pdbqt_audit_path",
+                        "pdbqt_audit_sha256",
+                    )
+                    if field in row
+                },
             }
         )
         if row.get("generation_provenance") is not None:
@@ -1305,6 +1371,10 @@ def execute_batch(
         }
         batch_identity = {
             "schema_version": "0.5b",
+            "selected_candidate_ids": list(preflight["selected_candidate_ids"]),
+            "selected_candidate_set_sha256": candidate_selection_sha256(
+                list(preflight["selected_candidate_ids"])
+            ),
             "candidate_manifest_sha256": file_sha256(manifest_path),
             "screening_protocol_sha256": file_sha256(protocol_path),
             "ligand_inventory_sha256": file_sha256(inventory_path),

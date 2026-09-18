@@ -24,6 +24,7 @@ from batch_execution_v05 import (  # noqa: E402
     REQUIRED_ANALYSIS_FILES,
     V04_FROZEN_ENSEMBLE_RULES,
     build_candidate_identity,
+    candidate_selection_sha256,
     build_ensemble_spec,
     create_attempt,
     execute_planned_batch,
@@ -115,6 +116,13 @@ class CandidateStateTests(unittest.TestCase):
 
 
 class AttemptIdentityTests(unittest.TestCase):
+    def test_batch_candidate_selection_digest_is_order_sensitive(self) -> None:
+        expected = candidate_selection_sha256(["A4", "B3"])
+        self.assertRegex(expected, r"^[0-9a-f]{64}$")
+        self.assertNotEqual(expected, candidate_selection_sha256(["B3", "A4"]))
+        with self.assertRaisesRegex(ValueError, "duplicate"):
+            candidate_selection_sha256(["A4", "A4"])
+
     def test_attempt_id_is_auditable_and_deterministic_for_supplied_time(self) -> None:
         created = datetime(2026, 9, 8, 12, 34, 56, tzinfo=timezone.utc)
         attempt_id = make_attempt_id(identity_fixture(), created)
@@ -785,6 +793,41 @@ class VinaResultIntegrityTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, message):
                     validate_vina_result(result, [1, 2])
 
+    def test_ranged_contract_accepts_one_nineteen_and_twenty_contiguous_models(self) -> None:
+        for count in (1, 19, 20):
+            labels = list(range(1, count + 1))
+            result = {
+                "complete": True,
+                "exit_code": 0,
+                "model_labels": labels,
+                "vina_scores": {label: -5.0 - label / 100 for label in labels},
+            }
+            with self.subTest(count=count):
+                validate_vina_result(
+                    result,
+                    model_count_range=(1, 20),
+                    require_parseable_vina_result_per_model=True,
+                )
+
+    def test_ranged_contract_rejects_bad_counts_labels_duplicates_and_scores(self) -> None:
+        invalid = (
+            {"model_labels": [], "vina_scores": {}},
+            {"model_labels": list(range(1, 22)), "vina_scores": {i: -5.0 for i in range(1, 22)}},
+            {"model_labels": [1, 3], "vina_scores": {1: -5.0, 3: -4.9}},
+            {"model_labels": [1, 1], "vina_scores": {1: -5.0}},
+            {"model_labels": [1, 2], "vina_scores": {1: -5.0}},
+            {"model_labels": [1], "vina_scores": {1: float("nan")}},
+        )
+        for fields in invalid:
+            result = {"complete": True, "exit_code": 0, **fields}
+            with self.subTest(result=result):
+                with self.assertRaisesRegex(RuntimeError, "MODEL|score|VINA"):
+                    validate_vina_result(
+                        result,
+                        model_count_range=(1, 20),
+                        require_parseable_vina_result_per_model=True,
+                    )
+
 
 class ProductionContractConstructionTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -835,6 +878,10 @@ class ProductionContractConstructionTests(unittest.TestCase):
                     "source_sdf_sha256": str(index + 1) * 64,
                     "audit_path": f"audit/X1_conf0{index + 1}.json",
                     "audit_sha256": str(index + 3) * 64,
+                    "ligand_pdbqt_path": f"prepared/X1_conf0{index + 1}.pdbqt",
+                    "ligand_pdbqt_sha256": str(index + 5) * 64,
+                    "pdbqt_audit_path": f"prepared/X1_conf0{index + 1}.json",
+                    "pdbqt_audit_sha256": str(index + 7) * 64,
                     "approval_basis": "formal",
                 }
             )
@@ -867,6 +914,11 @@ class ProductionContractConstructionTests(unittest.TestCase):
             identity["ligand_generation_provenance"]["status"],
         )
         self.assertEqual(2, len(identity["conformers"]))
+        self.assertEqual(
+            "prepared/X1_conf01.pdbqt",
+            identity["conformers"][0]["ligand_pdbqt_path"],
+        )
+        self.assertEqual("5" * 64, identity["conformers"][0]["ligand_pdbqt_sha256"])
         self.assertNotIn("A4", json.dumps(identity))
         self.assertNotIn("B3", json.dumps(identity))
 

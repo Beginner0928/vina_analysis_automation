@@ -1,0 +1,38 @@
+{
+  "schema_version": "0.5-partial35",
+  "package_id": "competition_v1_partial35_mmff_qc_pass",
+  "package_classification": "PARTIAL_EXPLORATORY_SCREENING",
+  "completeness_statement": "NOT_A_COMPLETE_TOP40_SCREEN",
+  "parent_generation_protocol": {
+    "protocol_id": "tfr1_top40_sdfgen_competition_v1_b3derived",
+    "sha256": "f79031dda94e148b851774b33082117ffde70f12b4cbf70b7f90a3266226a4a7"
+  },
+  "canonical_candidate_manifest": {
+    "manifest_id": "tfr1_top40_v05",
+    "sha256": "297c36027fdab031c70f799ca589635bf10349202df065ec0edfb6ed804a112e"
+  },
+  "chemistry_contract": {
+    "contract_id": "v04_formal_standardized_peptide_chemistry",
+    "sha256": "dd849afa0baa203fbbd4e2c6104b051edf7489b8da8a08fac9305d5696b04a7b"
+  },
+  "included_candidate_count": 35,
+  "expected_formal_sdf_count": 105,
+  "included_candidate_ids": [
+    "A1", "A2", "A3", "A4", "A5", "A6", "A7", "A9", "A10",
+    "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9", "B10",
+    "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10",
+    "D1", "D2", "D4", "D5", "D6", "D8", "D9"
+  ],
+  "included_candidate_set_sha256": "8b8e5f49fbc8c6bb9362fa1529b95b589faca7c3cb7229d13eb9280d496a9d75",
+  "included_candidate_set_sha256_definition": "sha256_canonical_json_identity_rows_candidate_id_group_sequence_peptide_length_in_manifest_order",
+  "excluded_candidates": [
+    {"candidate_id": "A8", "generation_exclusion_reason": "CONFORMER_GENERATION_QC_FAIL", "screening_status": "CONFORMER_GENERATION_QC_FAIL_NOT_DOCKED"},
+    {"candidate_id": "B1", "generation_exclusion_reason": "CONFORMER_GENERATION_QC_FAIL", "screening_status": "CONFORMER_GENERATION_QC_FAIL_NOT_DOCKED"},
+    {"candidate_id": "D3", "generation_exclusion_reason": "CONFORMER_GENERATION_QC_FAIL", "screening_status": "CONFORMER_GENERATION_QC_FAIL_NOT_DOCKED"},
+    {"candidate_id": "D7", "generation_exclusion_reason": "CONFORMER_GENERATION_QC_FAIL", "screening_status": "CONFORMER_GENERATION_QC_FAIL_NOT_DOCKED"},
+    {"candidate_id": "D10", "generation_exclusion_reason": "CONFORMER_GENERATION_QC_FAIL", "screening_status": "CONFORMER_GENERATION_QC_FAIL_NOT_DOCKED"}
+  ],
+  "output": {
+    "relative_directory": "standardized_ligands/partial_packages/competition_v1_partial35_mmff_qc_pass"
+  }
+}

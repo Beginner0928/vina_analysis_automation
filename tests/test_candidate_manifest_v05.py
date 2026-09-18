@@ -13,6 +13,7 @@ if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
 from candidate_manifest_v05 import (  # noqa: E402
+    PARTIAL35_EX16_PROTOCOL_ID,
     load_json_contract,
     select_candidates,
     validate_candidate_manifest,
@@ -207,6 +208,34 @@ class LigandInventoryAndProtocolTests(unittest.TestCase):
             protocol["docking_protocol"],
         )
         self.assertEqual(1, protocol["batch_execution"]["vina_process_concurrency"])
+
+    def test_partial35_ex16_protocol_is_an_explicit_exact_contract(self) -> None:
+        protocol = copy.deepcopy(self.protocol)
+        protocol["protocol_id"] = PARTIAL35_EX16_PROTOCOL_ID
+        protocol["docking_protocol"]["exhaustiveness"] = 16
+
+        validated = validate_screening_protocol(protocol)
+
+        self.assertEqual(16, validated["docking_protocol"]["exhaustiveness"])
+        self.assertEqual("1.2.7", validated["docking_protocol"]["version"])
+        self.assertEqual(20, validated["docking_protocol"]["num_modes"])
+        self.assertEqual(5, validated["docking_protocol"]["energy_range"])
+        self.assertEqual(1701, validated["docking_protocol"]["seed"])
+        self.assertEqual(8, validated["docking_protocol"]["cpu"])
+
+    def test_ex16_values_are_rejected_without_the_explicit_protocol_identity(self) -> None:
+        protocol = copy.deepcopy(self.protocol)
+        protocol["docking_protocol"]["exhaustiveness"] = 16
+        with self.assertRaisesRegex(ValueError, "protocol identity"):
+            validate_screening_protocol(protocol)
+
+    def test_partial35_ex16_protocol_rejects_any_other_vina_parameter_drift(self) -> None:
+        protocol = copy.deepcopy(self.protocol)
+        protocol["protocol_id"] = PARTIAL35_EX16_PROTOCOL_ID
+        protocol["docking_protocol"]["exhaustiveness"] = 16
+        protocol["docking_protocol"]["num_modes"] = 19
+        with self.assertRaisesRegex(ValueError, "ex16"):
+            validate_screening_protocol(protocol)
 
     def test_frozen_ligand_preparation_values_are_exact(self) -> None:
         protocol = copy.deepcopy(self.protocol)

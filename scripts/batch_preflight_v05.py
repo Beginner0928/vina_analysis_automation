@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import re
 from pathlib import Path
@@ -18,7 +19,9 @@ from candidate_manifest_v05 import (
 from environment_preflight_v05 import audit_runtime_environment, parse_requirements_lock
 from receptor_registry import resolve_receptor_bundle, validate_spec_against_bundle
 from standardized_vina_inputs import (
+    audit_ligand_pdbqt,
     audit_source_sdf,
+    compare_pdbqt_coordinates,
     comparison_protocol_id,
     read_single_sdf,
     sha256,
@@ -246,6 +249,55 @@ def _read_audit(path: Path, expected_hash: str, candidate: str, conformer: str, 
     return value
 
 
+def _audit_prepared_pdbqt_slot(
+    data_root: Path,
+    slot: dict[str, Any],
+    candidate_id: str,
+    sequence: str,
+    conformer: str,
+    source_sdf: Path,
+) -> dict[str, Any]:
+    """Verify one inventory-declared PDBQT and its independent audit record."""
+    run_id = f"{candidate_id}_{conformer}"
+    pdbqt = _resolve_relative(
+        data_root, slot["ligand_pdbqt_path"], "ligand PDBQT path"
+    )
+    pdbqt_hash = _verify_file(
+        pdbqt, slot["ligand_pdbqt_sha256"], f"{run_id} ligand PDBQT"
+    )
+    audit_path = _resolve_relative(
+        data_root, slot["pdbqt_audit_path"], "PDBQT audit path"
+    )
+    _verify_file(
+        audit_path, slot["pdbqt_audit_sha256"], f"{run_id} PDBQT audit"
+    )
+    payload = json.loads(audit_path.read_text(encoding="utf-8"))
+    if payload.get("candidate") != candidate_id:
+        raise ValueError("PDBQT audit candidate mismatch")
+    if payload.get("run_id") not in (None, run_id):
+        raise ValueError("PDBQT audit run_id mismatch")
+    if payload.get("status") not in (None, "PASS"):
+        raise ValueError("PDBQT audit status is not PASS")
+    recorded = payload.get("ligand_pdbqt")
+    if not isinstance(recorded, dict):
+        recorded = payload.get("generated_pdbqt")
+    if isinstance(recorded, dict):
+        recorded_hash = recorded.get("sha256") or recorded.get(
+            "generated_pdbqt_sha256"
+        )
+        if recorded_hash is not None and recorded_hash != pdbqt_hash:
+            raise ValueError("PDBQT audit artifact SHA-256 mismatch")
+    direct_audit = audit_ligand_pdbqt(pdbqt, source_sdf, sequence)
+    coordinate_audit = compare_pdbqt_coordinates(source_sdf, pdbqt)
+    return {
+        "resolved_ligand_pdbqt": str(pdbqt),
+        "resolved_pdbqt_audit": str(audit_path),
+        "pdbqt_artifact_validation_status": "PASS",
+        "ligand_pdbqt_sha256": direct_audit["sha256"],
+        "pdbqt_coordinate_identity": coordinate_audit,
+    }
+
+
 def _formal_chemistry_spec(sequence: str) -> dict[str, Any]:
     return {
         "formal_charge": expected_formal_charge(sequence),
@@ -320,6 +372,14 @@ def _runtime_spec(
                 "conformer_name": slot["conformer_name"],
                 "source_sdf_path": slot["source_sdf_path"],
                 "source_sdf_sha256": slot["source_sdf_sha256"],
+                **(
+                    {
+                        "ligand_pdbqt_path": slot["ligand_pdbqt_path"],
+                        "ligand_pdbqt_sha256": slot["ligand_pdbqt_sha256"],
+                    }
+                    if "ligand_pdbqt_path" in slot
+                    else {}
+                ),
             }
             for slot in slots
         ],
@@ -428,6 +488,37 @@ def run_dry_run(
             "slot_count": len(slots_by_key),
             "status": "PASS",
         }
+        partial_package = inventory.get("partial_package")
+        if isinstance(partial_package, dict):
+            partial_manifest = _resolve_relative(
+                data_root,
+                partial_package["manifest_path"],
+                "partial conformer package manifest",
+            )
+            partial_hash = _verify_file(
+                partial_manifest,
+                partial_package["manifest_sha256"],
+                "partial conformer package manifest",
+            )
+            if partial_package.get("completeness_statement") != "NOT_A_COMPLETE_TOP40_SCREEN":
+                raise ValueError("Partial ligand inventory has an invalid completeness statement")
+            expected_preparation_hash = hashlib.sha256(
+                json.dumps(
+                    protocol["ligand_preparation"],
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    ensure_ascii=True,
+                ).encode("ascii")
+            ).hexdigest()
+            if inventory.get("ligand_preparation_contract_sha256") != expected_preparation_hash:
+                raise ValueError("Partial ligand inventory preparation contract SHA-256 mismatch")
+            global_checks["partial_conformer_package"] = {
+                "package_id": partial_package.get("package_id"),
+                "manifest_path": str(partial_manifest),
+                "manifest_sha256": partial_hash,
+                "completeness_statement": partial_package["completeness_statement"],
+                "status": "PASS",
+            }
         global_checks["tracked_contracts"]["ligand_inventory"] = _tracked_contract_audit(
             inventory_path,
             SCHEMA_ROOT / "top40_ligand_inventory_v05.schema.json",
@@ -603,12 +694,21 @@ def run_dry_run(
         for slot in slots:
             conformer = slot["conformer_name"]
             status = slot["readiness_status"]
-            if status == "not_prepared":
+            if status in {"not_prepared", "conformer_generation_qc_fail_not_docked"}:
+                reason = (
+                    "conformer-generation QC excluded and not docked"
+                    if status == "conformer_generation_qc_fail_not_docked"
+                    else "not prepared"
+                )
                 candidate_failures.append(
                     failure(
                         "candidate_preflight",
-                        "LIGAND_NOT_PREPARED",
-                        f"Formal ligand slot is not prepared: {candidate_id} {conformer}",
+                        (
+                            "LIGAND_CONFORMER_GENERATION_QC_FAIL_NOT_DOCKED"
+                            if status == "conformer_generation_qc_fail_not_docked"
+                            else "LIGAND_NOT_PREPARED"
+                        ),
+                        f"Formal ligand slot is {reason}: {candidate_id} {conformer}",
                         candidate_id,
                     )
                 )
@@ -627,6 +727,35 @@ def run_dry_run(
                 chemistry_audit = audit_frozen_chemistry(
                     sdf, candidate_id, candidate["sequence"]
                 )
+                pdbqt_validation: dict[str, Any] = {}
+                if status == "approved_for_exploratory_screening":
+                    try:
+                        pdbqt_validation = _audit_prepared_pdbqt_slot(
+                            data_root,
+                            slot,
+                            candidate_id,
+                            candidate["sequence"],
+                            conformer,
+                            sdf,
+                        )
+                    except Exception as exc:
+                        validated_slots.append(
+                            {
+                                **slot,
+                                "artifact_validation_status": "FAIL",
+                                "pdbqt_artifact_validation_status": "FAIL",
+                                "artifact_validation_error": str(exc),
+                            }
+                        )
+                        candidate_failures.append(
+                            failure(
+                                "candidate_preflight",
+                                _error_code(exc, "LIGAND_PDBQT"),
+                                str(exc),
+                                candidate_id,
+                            )
+                        )
+                        continue
                 validated = {
                     **slot,
                     "resolved_source_sdf": str(sdf),
@@ -634,9 +763,13 @@ def run_dry_run(
                     "artifact_validation_status": "PASS",
                     "chemistry_status": "PASS",
                     "formal_charge": chemistry_audit["formal_charge"],
+                    **pdbqt_validation,
                 }
                 validated_slots.append(validated)
-                if status == "approved_for_formal_screening":
+                if status in {
+                    "approved_for_formal_screening",
+                    "approved_for_exploratory_screening",
+                }:
                     ready_slots.append(validated)
                 else:
                     candidate_failures.append(

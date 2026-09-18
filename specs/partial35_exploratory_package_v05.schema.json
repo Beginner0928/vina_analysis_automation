@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "partial35_exploratory_package_v05.schema.json",
+  "title": "TfR1 PARTIAL35 exploratory conformer package contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "package_id",
+    "package_classification",
+    "completeness_statement",
+    "parent_generation_protocol",
+    "canonical_candidate_manifest",
+    "chemistry_contract",
+    "included_candidate_count",
+    "expected_formal_sdf_count",
+    "included_candidate_ids",
+    "included_candidate_set_sha256",
+    "included_candidate_set_sha256_definition",
+    "excluded_candidates",
+    "output"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.5-partial35"},
+    "package_id": {"const": "competition_v1_partial35_mmff_qc_pass"},
+    "package_classification": {"const": "PARTIAL_EXPLORATORY_SCREENING"},
+    "completeness_statement": {"const": "NOT_A_COMPLETE_TOP40_SCREEN"},
+    "parent_generation_protocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocol_id", "sha256"],
+      "properties": {
+        "protocol_id": {"const": "tfr1_top40_sdfgen_competition_v1_b3derived"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "canonical_candidate_manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["manifest_id", "sha256"],
+      "properties": {
+        "manifest_id": {"const": "tfr1_top40_v05"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "chemistry_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contract_id", "sha256"],
+      "properties": {
+        "contract_id": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "included_candidate_count": {"const": 35},
+    "expected_formal_sdf_count": {"const": 105},
+    "included_candidate_ids": {
+      "type": "array",
+      "minItems": 35,
+      "maxItems": 35,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[ABCD](?:[1-9]|10)$"}
+    },
+    "included_candidate_set_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "included_candidate_set_sha256_definition": {"const": "sha256_canonical_json_identity_rows_candidate_id_group_sequence_peptide_length_in_manifest_order"},
+    "excluded_candidates": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["candidate_id", "generation_exclusion_reason", "screening_status"],
+        "properties": {
+          "candidate_id": {"type": "string"},
+          "generation_exclusion_reason": {"const": "CONFORMER_GENERATION_QC_FAIL"},
+          "screening_status": {"const": "CONFORMER_GENERATION_QC_FAIL_NOT_DOCKED"}
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relative_directory"],
+      "properties": {
+        "relative_directory": {"const": "standardized_ligands/partial_packages/competition_v1_partial35_mmff_qc_pass"}
+      }
+    }
+  }
+}
