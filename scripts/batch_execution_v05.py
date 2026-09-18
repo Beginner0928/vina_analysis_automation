@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import csv
 import json
+import math
 from datetime import datetime, timezone
 from dataclasses import dataclass
 from enum import Enum
@@ -502,18 +503,65 @@ class ExecutionAdapters:
     analyze_candidate: AnalysisFunction
 
 
-def validate_vina_result(result: dict[str, Any], expected_model_labels: list[int]) -> None:
+def validate_vina_result(
+    result: dict[str, Any],
+    expected_model_labels: list[int] | None = None,
+    *,
+    model_count_range: tuple[int, int] | None = None,
+    require_parseable_vina_result_per_model: bool = False,
+) -> None:
     if result.get("complete") is not True or result.get("exit_code") != 0:
         raise RuntimeError(
             f"Vina exit was not successful: complete={result.get('complete')!r}, "
             f"exit_code={result.get('exit_code')!r}"
         )
     labels = result.get("model_labels")
-    if labels != expected_model_labels:
+    if not isinstance(labels, list) or any(
+        isinstance(label, bool) or not isinstance(label, int) for label in labels
+    ):
+        raise RuntimeError(f"Vina MODEL labels are invalid: {labels!r}")
+    if expected_model_labels is not None and model_count_range is not None:
+        raise ValueError("Choose exact expected_model_labels or model_count_range, not both")
+    if expected_model_labels is not None and labels != expected_model_labels:
         raise RuntimeError(
             f"Vina MODEL labels differ from the frozen protocol: "
             f"expected={expected_model_labels!r}, actual={labels!r}"
         )
+    if model_count_range is not None:
+        minimum, maximum = model_count_range
+        if minimum < 1 or maximum < minimum:
+            raise ValueError(f"Invalid Vina MODEL count range: {model_count_range!r}")
+        count = len(labels)
+        expected_contiguous = list(range(1, count + 1))
+        if count < minimum or count > maximum or labels != expected_contiguous:
+            raise RuntimeError(
+                "Vina MODEL labels violate the ranged protocol: "
+                f"required_count={minimum}..{maximum}, required_labels=1..N, actual={labels!r}"
+            )
+    if expected_model_labels is None and model_count_range is None:
+        raise ValueError("A Vina MODEL validation contract is required")
+    if require_parseable_vina_result_per_model:
+        raw_scores = result.get("vina_scores")
+        if not isinstance(raw_scores, dict):
+            raise RuntimeError("Vina score evidence is missing for MODEL records")
+        scores: dict[int, Any] = {}
+        for raw_label, score in raw_scores.items():
+            try:
+                label = int(raw_label)
+            except (TypeError, ValueError) as exc:
+                raise RuntimeError(f"Vina score has an invalid MODEL key: {raw_label!r}") from exc
+            if label in scores:
+                raise RuntimeError(f"Duplicate Vina score evidence for MODEL {label}")
+            scores[label] = score
+        if set(scores) != set(labels):
+            raise RuntimeError(
+                f"Vina score MODEL coverage differs from output labels: "
+                f"labels={labels!r}, score_models={sorted(scores)!r}"
+            )
+        for label in labels:
+            score = scores[label]
+            if isinstance(score, bool) or not isinstance(score, (int, float)) or not math.isfinite(float(score)):
+                raise RuntimeError(f"REMARK VINA RESULT score is not parseable for MODEL {label}")
 
 
 def _batch_failure(code: str, message: str) -> dict[str, Any]:

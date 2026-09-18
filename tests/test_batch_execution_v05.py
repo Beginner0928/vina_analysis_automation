@@ -793,6 +793,41 @@ class VinaResultIntegrityTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, message):
                     validate_vina_result(result, [1, 2])
 
+    def test_ranged_contract_accepts_one_nineteen_and_twenty_contiguous_models(self) -> None:
+        for count in (1, 19, 20):
+            labels = list(range(1, count + 1))
+            result = {
+                "complete": True,
+                "exit_code": 0,
+                "model_labels": labels,
+                "vina_scores": {label: -5.0 - label / 100 for label in labels},
+            }
+            with self.subTest(count=count):
+                validate_vina_result(
+                    result,
+                    model_count_range=(1, 20),
+                    require_parseable_vina_result_per_model=True,
+                )
+
+    def test_ranged_contract_rejects_bad_counts_labels_duplicates_and_scores(self) -> None:
+        invalid = (
+            {"model_labels": [], "vina_scores": {}},
+            {"model_labels": list(range(1, 22)), "vina_scores": {i: -5.0 for i in range(1, 22)}},
+            {"model_labels": [1, 3], "vina_scores": {1: -5.0, 3: -4.9}},
+            {"model_labels": [1, 1], "vina_scores": {1: -5.0}},
+            {"model_labels": [1, 2], "vina_scores": {1: -5.0}},
+            {"model_labels": [1], "vina_scores": {1: float("nan")}},
+        )
+        for fields in invalid:
+            result = {"complete": True, "exit_code": 0, **fields}
+            with self.subTest(result=result):
+                with self.assertRaisesRegex(RuntimeError, "MODEL|score|VINA"):
+                    validate_vina_result(
+                        result,
+                        model_count_range=(1, 20),
+                        require_parseable_vina_result_per_model=True,
+                    )
+
 
 class ProductionContractConstructionTests(unittest.TestCase):
     def setUp(self) -> None:
